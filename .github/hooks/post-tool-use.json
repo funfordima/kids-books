@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "type": "command",
+        "windows": "powershell -NoProfile -File \".github/hooks/scripts/post-tool-use-format.ps1\"",
+        "command": "bash .github/hooks/scripts/post-tool-use-format.sh",
+        "timeout": 30
+      }
+    ]
+  }
+}

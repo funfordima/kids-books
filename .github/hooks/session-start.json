@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "windows": "powershell -NoProfile -Command \"$plan = Get-Content 'docs/SDLC_PLAN.md' -Raw -ErrorAction SilentlyContinue; if (-not $plan) { $plan = Get-Content '../docs/SDLC_PLAN.md' -Raw -ErrorAction SilentlyContinue }; $phases = ($plan | Select-String -Pattern '## Phase \\d' -AllMatches).Matches | ForEach-Object { $_.Value }; $checked = ($plan | Select-String -Pattern '- \\[x\\]' -AllMatches).Matches.Count; $unchecked = ($plan | Select-String -Pattern '- \\[ \\]' -AllMatches).Matches.Count; $next = ($plan | Select-String -Pattern '- \\[ \\] .+' -AllMatches).Matches | Select-Object -First 3 | ForEach-Object { $_.Value.Trim() }; $msg = @{ systemMessage = ('=== SDLC CONTEXT (DarkFactory) ===' + [Environment]::NewLine + 'Source of truth: docs/SDLC_PLAN.md' + [Environment]::NewLine + 'Completed gate items: ' + $checked + [Environment]::NewLine + 'Pending gate items: ' + $unchecked + [Environment]::NewLine + 'Next 3 pending tasks:' + [Environment]::NewLine + ($next -join [Environment]::NewLine) + [Environment]::NewLine + '=== RULES ===' + [Environment]::NewLine + '1. No phase advance without: tsc --noEmit clean + Vitest >=65% coverage' + [Environment]::NewLine + '2. CodeReviewer is read-only — it never edits source code' + [Environment]::NewLine + '3. Commit to git at every gate checkpoint' + [Environment]::NewLine + '4. Implement only what is in the active user story') }; $msg | ConvertTo-Json -Compress\"",
+        "command": "bash -c \"plan=$(cat docs/SDLC_PLAN.md 2>/dev/null || cat ../docs/SDLC_PLAN.md 2>/dev/null); checked=$(echo \"$plan\" | grep -c '- \\[x\\]' || echo 0); unchecked=$(echo \"$plan\" | grep -c '- \\[ \\]' || echo 0); next=$(echo \"$plan\" | grep '- \\[ \\]' | head -3); echo \"{\\\"systemMessage\\\": \\\"=== SDLC CONTEXT (DarkFactory) ===\\\\nSource of truth: docs/SDLC_PLAN.md\\\\nCompleted gate items: $checked\\\\nPending gate items: $unchecked\\\\nNext 3 pending tasks:\\\\n$next\\\\n=== RULES ===\\\\n1. No phase advance without: tsc --noEmit clean + Vitest >=65% coverage\\\\n2. CodeReviewer is read-only - it never edits source code\\\\n3. Commit to git at every gate checkpoint\\\\n4. Implement only what is in the active user story\\\"}\"",
+        "timeout": 10
+      }
+    ]
+  }
+}
