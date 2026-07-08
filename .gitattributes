@@ -1,0 +1,7 @@
+* text=auto
+
+# Keep shell scripts LF for cross-platform execution.
+*.sh text eol=lf
+
+# Keep PowerShell scripts native on Windows.
+*.ps1 text eol=crlf
