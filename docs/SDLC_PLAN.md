@@ -13,6 +13,37 @@
 | Deployment | Vercel (web) + Railway.app (worker) + Upstash Redis + Supabase |
 
 ---
+## Requirements Override (2026-07-09)
+
+This section supersedes conflicting stack or architecture details elsewhere in this document.
+
+### Main Idea
+
+Build a SaaS service that generates customizable books with pictures for kids.
+Primary customers are parents who want engaging, useful books that help children learn new things.
+
+### Baseline Technology Stack
+
+- Backend: NestJS (TypeScript)
+- Frontend: Next.js (TypeScript)
+- Database: PostgreSQL with Prisma ORM
+- Queues: Redis (BullMQ)
+- Authentication: Google OAuth
+- Local infrastructure: Docker / Docker Compose
+- Object storage: MinIO (local/test) and S3 (production)
+
+### Core Business Entities
+
+- Users
+- Templates
+- Books
+- Characters (parents and children)
+- Pictures
+- Subscriptions
+- Ratings
+- ReferralProgram
+- Jobs (queue records for books and pictures)
+
 
 ## Phase 0 — Investigation
 

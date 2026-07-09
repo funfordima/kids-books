@@ -4,20 +4,36 @@
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 14 App Router + TypeScript (strict) + Tailwind CSS |
-| Story AI | OpenAI GPT-4o (structured JSON output) |
-| Illustration AI | OpenAI DALL-E 3 (async, per page) |
-| Job Queue | BullMQ + Upstash Redis |
-| Queue Worker | Railway.app (Node.js, always-on) |
-| Auth | Supabase Auth (email + Google OAuth, JWT in httpOnly cookie) |
-| Database | Supabase PostgreSQL (RLS enforced on every table) |
-| Asset Storage | Supabase Storage (book-images, book-pdfs buckets) |
+| Backend API | NestJS + TypeScript (strict) |
+| Frontend | Next.js (TypeScript strict) |
+| Database | PostgreSQL + Prisma ORM |
+| Job Queue | Redis (BullMQ) |
+| Auth | Google OAuth |
+| Asset Storage | MinIO (local/test, S3 compatible) + AWS S3 (production) |
+| Local Infrastructure | Docker / Docker Compose |
 | PDF | @react-pdf/renderer |
-| Subscriptions | Stripe (recurring billing + webhooks) |
-| Content Safety | OpenAI Moderation API (mandatory before DB write) |
-| Deployment | Vercel (web) + Railway.app (worker) |
+| Deployment | Frontend + Backend deployment split (provider TBD by environment) |
 | Testing | Vitest + V8 coverage + Playwright (E2E) |
-| Monitoring | Sentry + Vercel Analytics |
+| Monitoring | Sentry + provider-native metrics |
+
+## Product Direction
+
+This project is a SaaS service to generate customizable books with pictures for kids.
+
+- Main customers: parents who want engaging, personalized, educational books for their children.
+- Product goal: help children stay interested while learning useful and new things.
+
+### Core Business Entities
+
+- Users
+- Templates
+- Books
+- Characters (parents and children)
+- Pictures
+- Subscriptions
+- Ratings
+- ReferralProgram
+- Jobs (queue-backed book and picture processing)
 
 ## DarkFactory Operating Mode
 
@@ -34,39 +50,51 @@ This project uses a **DarkFactory multi-agent SDLC pipeline**. All agents operat
 
 ## Coding Conventions
 
+### Execution Rules
+
+- Analyze before developing any feature.
+- Do not guess on ambiguous requirements; ask clarification questions first and suggest simple options when useful.
+- Apply minimalism: implement only what is required for the current feature.
+- Prefer the simplest and shortest correct implementation when multiple valid approaches exist.
+- Follow the existing project architecture and code style.
+- Remove unused code when it is no longer needed.
+- For complex tasks, use decomposition: plan, act, check.
+
 ### General
 - TypeScript `strict: true` — no `any`, no `!` non-null assertions on unknown values
 - Prettier + ESLint enforced (see `post-tool-use` hook)
 - No `console.log` in production code; use structured logging or Sentry
 - No secrets in source code — use environment variables only
 
-### Next.js 14 App Router
-- Prefer **Server Components** by default; add `"use client"` only when browser APIs or hooks are needed
-- Use **Server Actions** (`"use server"`) for form mutations; use API routes (`/api/`) for webhook handlers and queue consumers
-- Never import `SUPABASE_SERVICE_ROLE_KEY` in client components or `"use client"` files
-- Middleware in `middleware.ts` validates JWT and `subscription_status` on all protected routes
+### Backend (NestJS)
+- Use module boundaries (`modules/*`) and keep controllers thin, services focused, and providers testable.
+- Validate all DTO inputs with `class-validator` and `class-transformer`.
+- Keep API contracts explicit with typed DTOs; no implicit `any` payloads.
 
-### API Routes
-- Validate all inputs with **Zod** — return `400` with structured errors on failure
-- Verify auth with Supabase SSR client on every request
-- Run **OpenAI Moderation API** on every AI output before DB write — reject and return `422` if flagged
-- Verify Stripe webhook signatures with `stripe.webhooks.constructEvent()` — return `400` on failure
+### Frontend (Next.js)
+- Keep UI concerns in Next.js and business/domain logic in backend services.
+- Prefer server components when possible; use client components only when browser APIs or client state are required.
+- Integrate with backend via typed API client utilities.
 
-### Database (Supabase)
-- **RLS must be enabled** on every table — `auth.uid() = user_id` policy on all user data
-- Never use `service_role` key client-side
-- Use parameterized queries only (Supabase SDK) — no string interpolation in SQL
-- Schema changes via Supabase migrations, not manual ALTER TABLE
+### Database (Prisma + PostgreSQL)
+- Define schema in `prisma/schema.prisma` and use Prisma Migrate for all schema changes.
+- No raw SQL string interpolation; use Prisma APIs or parameterized queries only.
+- Index foreign keys and high-read filter fields (for books, pictures, jobs, subscriptions).
 
-### Queue (BullMQ)
-- Retry config: 3 attempts, exponential backoff (1s, 5s, 30s)
-- Job TTL: 24 hours
-- Worker concurrency: 3 (DALL-E 3 rate limit buffer)
+### Queue (Redis + BullMQ)
+- Queue book generation and picture generation as separate job types.
+- Default retry config: 3 attempts with exponential backoff.
+- Ensure idempotency for processors and safe retries.
+
+### Storage (MinIO/S3)
+- Use MinIO for local/test environments and S3 for production.
+- Keep object keys deterministic and scoped by tenant/user/book.
+- Store only object URLs/keys in DB; never store binary files directly in PostgreSQL.
 
 ## Testing Standards
 
 - Test file location: co-located `*.test.ts` or `src/__tests__/`
-- Mock all external APIs in unit tests: OpenAI, Stripe, Supabase
+- Mock all external integrations in unit tests: OAuth provider, Redis, S3/MinIO, and payment adapters
 - Coverage threshold (CI-enforced): **≥ 65% line and branch** across `src/`
 - 100% test pass rate required before any phase gate advances
 
@@ -74,15 +102,15 @@ This project uses a **DarkFactory multi-agent SDLC pipeline**. All agents operat
 
 | Risk | Requirement |
 |------|------------|
-| A01 Broken Access Control | Supabase RLS + middleware subscription check on all protected routes |
+| A01 Broken Access Control | Enforce ownership checks in backend services and guards on every protected endpoint |
 | A02 Cryptographic Failures | HTTPS enforced; all secrets in env vars only |
-| A03 Injection | Zod on all API inputs; Supabase SDK parameterized queries |
-| A07 Auth Failures | JWT in httpOnly cookie; session refresh via Supabase SSR |
+| A03 Injection | DTO/schema validation on all API inputs; Prisma parameterized queries |
+| A07 Auth Failures | Secure OAuth flow, token validation, session hardening, and proper callback validation |
 | A09 Logging Failures | No PII in logs; Sentry error tracking only |
 | COPPA | No child personal data collected; parents create accounts only |
 
 ## Environment Variables
 
-Server-side only (never in client bundle): `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `UPSTASH_REDIS_REST_TOKEN`, `SENTRY_DSN`
+Server-side only (never in client bundle): `DATABASE_URL`, `REDIS_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT` (for MinIO), `SENTRY_DSN`
 
-Public (safe for client): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+Public (safe for client): only explicitly public frontend config values (for example `NEXT_PUBLIC_API_BASE_URL`)
