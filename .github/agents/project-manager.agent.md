@@ -41,7 +41,7 @@ Each AC must be:
 ## Technical Notes Quality Bar
 
 Every story must include:
-- The relevant tech stack components (e.g. "Supabase RLS required", "BullMQ job for async generation")
+- The relevant tech stack components (e.g. "Prisma ownership checks required", "BullMQ job for async generation")
 - Any SDLC_PLAN.md references (e.g. "Implements Phase 3b step 5 — Story generation service")
 - Known dependencies (what must exist first)
 - A commit checkpoint plan (2-5 logical implementation slices, each expected as a separate commit)

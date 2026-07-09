@@ -13,7 +13,7 @@ Pre-build readiness check. Converts acceptance criteria into concrete test cases
 
 1. For each acceptance criterion (AC) in the user story:
    - Write the specific Vitest test case that would verify it (test name + what to mock + what to assert)
-   - Identify what must be mocked (OpenAI, Stripe, Supabase, BullMQ)
+  - Identify what must be mocked (OpenAI, Stripe, Prisma client wrapper, BullMQ)
 2. Define build order — what must be implemented first?
 3. List proofs required (what evidence confirms each AC is met?)
 4. Identify any missing information that would block implementation
@@ -25,7 +25,7 @@ Pre-build readiness check. Converts acceptance criteria into concrete test cases
 
 AC-1: [description]
   Test: it('should [behavior] when [condition]', ...)
-  Mocks: vi.mock('openai'), vi.mock('@supabase/ssr')
+  Mocks: vi.mock('openai'), vi.mock('@/lib/db/prisma')
   Assert: expect(result).toEqual({ ... })
   Proof: HTTP 200 with correct shape; DB record created
 

@@ -34,9 +34,9 @@ Independent final verification. This phase confirms the phase gate is met before
 - [ ] Smoke test passes: signup → subscribe → generate → read → PDF download
 - [ ] Stripe test payment processed end-to-end
 - [ ] Sentry receiving test events
-- [ ] All environment variables set in Vercel + Railway dashboards
-- [ ] RLS policies verified on all tables
-- [ ] Railway worker deployed and consuming jobs
+- [ ] All environment variables set in Docker/Dokploy deployment configuration
+- [ ] Ownership/access checks validated in backend routes/services
+- [ ] Worker service deployed and consuming BullMQ jobs
 
 ## Output
 

@@ -7,32 +7,32 @@ applyTo: "**/*.{ts,tsx}"
 # Security Standards (OWASP Top 10)
 
 ## A01 — Broken Access Control
-- Supabase RLS is **mandatory** on every table: `auth.uid() = user_id` policy
-- Never query the database without going through the authenticated Supabase client
+- Enforce ownership checks in backend services and route guards on every protected endpoint
+- Never trust client-provided user IDs for database access decisions
 - Middleware at `middleware.ts` validates JWT AND `subscription_status` on all protected routes
 - Protected routes: `/dashboard`, `/create`, `/book/[id]`, `/account`
 
 ## A02 — Cryptographic Failures
-- HTTPS enforced on all environments (Vercel enforces by default)
+- HTTPS enforced on all environments
 - All secrets in environment variables — zero secrets in source code or git history
 - Never commit `.env.local` or any file containing real secrets
-- `SUPABASE_SERVICE_ROLE_KEY` and `STRIPE_SECRET_KEY` are server-side only
+- `DATABASE_URL`, `REDIS_URL`, `GOOGLE_CLIENT_SECRET`, `STRIPE_SECRET_KEY`, `S3_SECRET_ACCESS_KEY` are server-side only
 
 ## A03 — Injection
 - Use **Zod** to validate all external inputs at system boundaries (API routes, Server Actions)
-- Use **Supabase SDK** parameterized queries only — never interpolate user input into SQL strings
+- Use **Prisma** or parameterized queries only — never interpolate user input into SQL strings
 - Sanitize all content passed to OpenAI Moderation API before using AI output
 
 ## A05 — Security Misconfiguration
-- RLS must be explicitly enabled (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`) in every migration
+- Prisma migrations must preserve least-privilege access patterns and avoid exposing unrestricted cross-user reads
 - No debug endpoints in production
-- All environment variables must be set in Vercel and Railway dashboards — never fall back to default insecure values
+- All environment variables must be set in deployment/runtime configuration (Docker/Dokploy and CI) — never fall back to default insecure values
 
 ## A07 — Authentication Failures
 - JWT stored in **httpOnly cookie** only — never `localStorage`
-- Session refresh handled by Supabase SSR client automatically
-- Rate limiting on auth endpoints (Supabase provides this by default)
-- Validate `user` with `supabase.auth.getUser()` server-side — never trust client-provided user IDs
+- Session validation handled server-side on protected routes and API endpoints
+- Rate limiting on auth-sensitive endpoints is required
+- Validate authenticated user server-side on every protected data access
 
 ## A09 — Logging Failures
 - No PII in logs: no email, no child name, no story content, no user IDs

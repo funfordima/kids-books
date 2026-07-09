@@ -12,6 +12,16 @@
 | Auth | Google OAuth |
 | Deployment | Dockerfile-based builds with Dokploy |
 
+## Project State Recording Rule
+
+After every logically complete implementation, update `docs/PROJECT_STATE.md` in the same change set.
+
+Minimum required update:
+1. Refresh the snapshot date.
+2. Append a concise implementation log entry.
+3. Document what changed and how it works now.
+4. Reference verification evidence when available (typecheck, tests, coverage, or gate output).
+
 ---
 ## Requirements Override (2026-07-09)
 

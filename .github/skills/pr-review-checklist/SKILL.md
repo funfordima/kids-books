@@ -35,7 +35,7 @@ Produces a structured, adversarial code review across 5 axes. Used exclusively b
 - Are Server vs Client components used correctly?
 - Is Zod validation present at the API boundary?
 - Does it respect the queue architecture (BullMQ job for image gen, not inline)?
-- Is the Supabase client used correctly (SSR server client on server, browser client in `"use client"`)?
+- Are auth and ownership checks enforced server-side before data access?
 
 ### Axis 3 — Security
 - Invoke the `security-audit` skill — report all findings
@@ -43,7 +43,7 @@ Produces a structured, adversarial code review across 5 axes. Used exclusively b
 
 ### Axis 4 — Test Coverage
 - Are tests present for all new logic?
-- Do tests mock all external APIs (OpenAI, Stripe, Supabase)?
+- Do tests mock all external APIs/dependencies (OpenAI, Stripe, database wrapper, queue/storage clients)?
 - Would the tests catch a regression if the implementation changed?
 - Are error paths tested (not just happy path)?
 

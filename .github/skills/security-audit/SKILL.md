@@ -22,20 +22,20 @@ Runs the project-specific OWASP Top 10 security checklist against the current im
 ## Quick Checks (run these searches)
 
 ### A01 — Access Control
-- Search for routes in `src/app/api/` that DON'T call `supabase.auth.getUser()`
+- Search for protected routes in `src/app/api/` that do NOT perform server-side auth and ownership checks
 - Verify `middleware.ts` exists and protects `/dashboard`, `/create`, `/book/[id]`, `/account`
-- Verify all Supabase tables have RLS enabled in migrations
+- Verify query/service layer enforces per-user ownership and does not allow cross-user reads/writes
 
 ### A02 — Cryptographic Failures
-- Search for: `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY` — ensure NONE appear in `"use client"` files or `src/app/` client components
+- Search for: `OPENAI_API_KEY`, `DATABASE_URL`, `STRIPE_SECRET_KEY`, `GOOGLE_CLIENT_SECRET`, `S3_SECRET_ACCESS_KEY` — ensure NONE appear in `"use client"` files or `src/app/` client components
 - Search for any hardcoded key patterns: `sk-`, `whsec_`, `rk_live_`
 
 ### A03 — Injection
 - Search all API routes — verify each has `z.object(...)` Zod schema before processing input
-- Check for any raw SQL string interpolation: `${` inside Supabase query strings
+- Check for any raw SQL string interpolation in database queries
 
 ### A07 — Auth Failures
-- Verify JWT stored in httpOnly cookie (check Supabase SSR client configuration)
+- Verify JWT/session is stored in httpOnly cookie
 - Verify no `localStorage.setItem` calls with tokens
 
 ### A09 — Logging Failures
@@ -43,7 +43,7 @@ Runs the project-specific OWASP Top 10 security checklist against the current im
 - Verify Sentry is used for errors, not informational logging
 
 ### Content Safety
-- Verify `/api/generate-story` calls `openai.moderations.create()` BEFORE writing to Supabase
+- Verify `/api/generate-story` calls `openai.moderations.create()` BEFORE writing to the database
 - Check that moderation failure returns `422` and does NOT write to DB
 
 ### COPPA

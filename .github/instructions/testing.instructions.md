@@ -22,8 +22,8 @@ Always mock these in unit tests — never call live APIs:
 // OpenAI
 vi.mock('openai', () => ({ default: vi.fn() }))
 
-// Supabase
-vi.mock('@supabase/ssr', () => ({ createServerClient: vi.fn() }))
+// Prisma client wrapper
+vi.mock('@/lib/db/prisma', () => ({ prisma: { $transaction: vi.fn() } }))
 
 // Stripe
 vi.mock('stripe', () => ({ default: vi.fn() }))

@@ -19,7 +19,7 @@ Creates consistently structured user stories following the DarkFactory spec-driv
 2. **Identify user type** — who benefits: `parent user`, `subscriber`, `system (worker)`, `admin`
 3. **Define the goal** — one clear outcome the user achieves
 4. **Write 3–5 acceptance criteria** — each as Given/When/Then
-5. **Add technical notes** — relevant stack constraints (e.g. "must use Supabase RLS", "must enqueue BullMQ job")
+5. **Add technical notes** — relevant stack constraints (e.g. "must enforce backend ownership checks", "must enqueue BullMQ job")
 6. **Fill Definition of Done** — standard checklist every story requires
 7. **Assign priority** — P0 (blocking), P1 (current sprint), P2 (next sprint)
 8. **Output** — the filled template below, ready to paste into a GitHub issue

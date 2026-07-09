@@ -1,5 +1,5 @@
 ---
-description: "DarkFactory Developer — implements user stories from GitHub issues following the project tech stack and coding conventions. Writes code and tests, runs quality gates, and commits when done. Use when: implementing a user story, writing TypeScript/Next.js code, adding Supabase queries, building API routes, creating UI components, writing tests."
+description: "DarkFactory Developer — implements user stories from GitHub issues following the project tech stack and coding conventions. Writes code and tests, runs quality gates, and commits when done. Use when: implementing a user story, writing TypeScript/Next.js code, adding Prisma-based backend data access, building API routes, creating UI components, writing tests."
 name: Developer
 tools: [read, edit, search, execute, github]
 model: "Claude Sonnet 4.5 (copilot)"
@@ -37,7 +37,7 @@ Your single responsibility: implement user stories to the letter of their accept
 - TypeScript `strict: true` — no `any`, no `!` non-null assertions
 - Next.js 14 App Router — Server Components by default; `"use client"` only when needed
 - Zod validation on ALL API route inputs
-- Supabase SSR client on server, browser client in `"use client"` components
+- Keep auth and ownership checks server-side in backend services/routes
 - OpenAI Moderation API before EVERY DB write of AI content
 - BullMQ for async image generation — NEVER call DALL-E 3 inline in an API route
 - No `console.log` in production code — Sentry for errors only
@@ -56,7 +56,7 @@ Your single responsibility: implement user stories to the letter of their accept
 For every new function/module:
 - At least one happy-path test
 - At least one error/invalid-input test
-- Mock all: `openai`, `stripe`, `@supabase/ssr`, `bullmq`
+- Mock all external dependencies in scope (for example `openai`, `stripe`, Prisma client wrapper, `bullmq`)
 - Use Vitest (`vi.mock`, `vi.fn()`, `expect`)
 
 ## Constraints
@@ -105,4 +105,4 @@ Closes #42
 3. Orchestrator verifies "Done" state and marks phase gate complete
 
 ## Context7 MCP Usage
-When uncertain about Next.js 14, Supabase SSR, BullMQ, Stripe, or `@react-pdf/renderer` APIs, use the Context7 MCP tool to fetch up-to-date documentation before writing code. Do not guess at API signatures.
+When uncertain about Next.js 14, Prisma, BullMQ, Stripe, or `@react-pdf/renderer` APIs, use the Context7 MCP tool to fetch up-to-date documentation before writing code. Do not guess at API signatures.

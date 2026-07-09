@@ -29,7 +29,7 @@
 
 - [ ] Server/Client component split correct
 - [ ] Zod validation at API boundary
-- [ ] Supabase client used correctly (SSR vs browser)
+- [ ] Auth and ownership checks enforced server-side
 - [ ] Queue architecture followed (BullMQ for async)
 - [ ] Environment variables used correctly (no secrets in client)
 
@@ -63,7 +63,7 @@
 **Verdict**: PASS | WARN | FAIL
 
 - [ ] Tests present for all new logic
-- [ ] External APIs mocked (OpenAI, Stripe, Supabase)
+- [ ] External APIs/dependencies mocked (OpenAI, Stripe, DB wrapper, queue/storage)
 - [ ] Error paths tested (not just happy path)
 - [ ] Tests would catch regressions
 

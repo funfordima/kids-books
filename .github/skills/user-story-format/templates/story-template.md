@@ -28,7 +28,7 @@
 
 > Stack-specific constraints, implementation hints, and dependencies.
 
-- Must use: [relevant tech, e.g. Supabase RLS, Zod validation, BullMQ queue]
+- Must use: [relevant tech, e.g. backend ownership checks, Zod validation, BullMQ queue]
 - Depends on: [prior story or infrastructure that must exist first]
 - References: [relevant section of SDLC_PLAN.md]
 
@@ -39,7 +39,7 @@
 - [ ] TypeScript compiles clean (`tsc --noEmit` exits 0)
 - [ ] Unit tests written and passing for all new logic
 - [ ] Vitest coverage ≥ 65% maintained (run `npx vitest run --coverage`)
-- [ ] All external APIs mocked in tests (OpenAI, Stripe, Supabase)
+- [ ] All external APIs/dependencies mocked in tests (OpenAI, Stripe, DB wrapper, queue/storage)
 - [ ] Code reviewed by `@code-reviewer` agent
 - [ ] Security checklist passed (see `security-audit` skill)
 - [ ] No `console.log` in production code paths

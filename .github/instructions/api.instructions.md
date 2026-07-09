@@ -9,14 +9,13 @@ applyTo: "src/app/api/**/*.{ts,tsx}"
 ## Mandatory Pattern (every route)
 Every API route handler MUST follow this order:
 1. Parse and validate request body/params with **Zod** — return `400` on failure
-2. Verify authentication via Supabase SSR client — return `401` if no session
+2. Verify authentication via server-side auth/session guard — return `401` if no authenticated user
 3. Verify authorization (user owns the resource) — return `403` if not owner
 4. Process business logic
 5. Return typed JSON response
 
 ```ts
 import { z } from 'zod'
-import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 
 const schema = z.object({ ... })
@@ -33,8 +32,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 2. Auth
-  const supabase = createServerClient(...)
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // 3. Business logic ...

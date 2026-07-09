@@ -16,7 +16,7 @@ Produces architecture decisions for the active phase. No code is written — onl
 3. For each in-scope item, define:
    - **Directory/file location** — where will this code live?
    - **Interface** — what are the inputs, outputs, and error types for each function/component?
-   - **Integration points** — what external services does this touch (Supabase, OpenAI, BullMQ, Stripe)?
+  - **Integration points** — what external services does this touch (Prisma/PostgreSQL, OpenAI, BullMQ, Stripe)?
    - **Data flow** — how does data move through the system?
 4. Identify any architectural risks or decisions with tradeoffs
 5. Confirm alignment with the tech stack in `copilot-instructions.md`
@@ -41,7 +41,7 @@ Key Interfaces:
 Integration Points:
 - OpenAI GPT-4o → structured JSON output
 - OpenAI Moderation API → check before DB write
-- Supabase → insert books + pages
+- Prisma/PostgreSQL → persist books + pages
 - BullMQ → enqueue one job per page
 
 Architectural Decisions:
