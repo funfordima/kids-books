@@ -1,0 +1,33 @@
+name: design-tokens-server
+version: 0.1.0
+mode: warning-only
+scope:
+  include:
+    - apps/frontend/**
+resources:
+  - uri: ds://tokens/active
+    description: Active design tokens catalog
+  - uri: ds://tokens/deprecated
+    description: Deprecated tokens with replacements
+tools:
+  - name: validate_token_usage
+    input:
+      path: string
+    output:
+      warnings:
+        - code: string
+          file: string
+          line: number
+          message: string
+  - name: suggest_token_replacements
+    input:
+      path: string
+    output:
+      suggestions:
+        - file: string
+          line: number
+          from: string
+          to: string
+prompts:
+  - name: token-compliance-review
+    description: Review changed frontend files for token compliance warnings

@@ -1,0 +1,31 @@
+name: storybook-qa-server
+version: 0.1.0
+mode: warning-only
+scope:
+  include:
+    - apps/frontend/**
+tools:
+  - name: generate_stories_for_components
+    input:
+      component_glob: string
+    output:
+      created:
+        - file: string
+  - name: run_storybook_a11y_checks
+    input:
+      changed_only: boolean
+    output:
+      warnings:
+        - file: string
+          story: string
+          message: string
+  - name: run_component_interaction_checks
+    input:
+      changed_only: boolean
+    output:
+      warnings:
+        - story: string
+          message: string
+prompts:
+  - name: pre-merge-component-qa
+    description: Run warning-only Storybook component QA for changed stories

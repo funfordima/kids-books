@@ -1,0 +1,28 @@
+name: visual-regression-server
+version: 0.1.0
+mode: warning-only
+scope:
+  include:
+    - apps/frontend/**
+tools:
+  - name: capture_baseline
+    input:
+      routes:
+        - string
+    output:
+      baselines:
+        - route: string
+          image: string
+  - name: compare_visuals
+    input:
+      routes:
+        - string
+      threshold: number
+    output:
+      warnings:
+        - route: string
+          diffPercent: number
+          artifact: string
+prompts:
+  - name: visual-diff-review
+    description: Generate warning report for visual diffs on changed routes

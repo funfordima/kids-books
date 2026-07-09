@@ -1,0 +1,29 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "font": {
+    "family": {
+      "heading": { "value": "'Baloo 2', 'Trebuchet MS', sans-serif", "type": "fontFamily" },
+      "body": { "value": "'Source Serif 4', Georgia, serif", "type": "fontFamily" },
+      "ui": { "value": "'Atkinson Hyperlegible', 'Segoe UI', sans-serif", "type": "fontFamily" }
+    },
+    "size": {
+      "xs": { "value": "12px", "type": "fontSize" },
+      "sm": { "value": "14px", "type": "fontSize" },
+      "md": { "value": "16px", "type": "fontSize" },
+      "lg": { "value": "20px", "type": "fontSize" },
+      "xl": { "value": "28px", "type": "fontSize" },
+      "2xl": { "value": "36px", "type": "fontSize" }
+    },
+    "weight": {
+      "regular": { "value": "400", "type": "fontWeight" },
+      "medium": { "value": "500", "type": "fontWeight" },
+      "semibold": { "value": "600", "type": "fontWeight" },
+      "bold": { "value": "700", "type": "fontWeight" }
+    },
+    "lineHeight": {
+      "tight": { "value": "1.2", "type": "lineHeight" },
+      "normal": { "value": "1.5", "type": "lineHeight" },
+      "relaxed": { "value": "1.7", "type": "lineHeight" }
+    }
+  }
+}

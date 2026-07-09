@@ -1,0 +1,17 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "shadow": {
+    "sm": {
+      "value": "0 1px 2px rgba(15, 23, 42, 0.12)",
+      "type": "boxShadow"
+    },
+    "md": {
+      "value": "0 6px 16px rgba(15, 23, 42, 0.14)",
+      "type": "boxShadow"
+    },
+    "lg": {
+      "value": "0 12px 28px rgba(15, 23, 42, 0.16)",
+      "type": "boxShadow"
+    }
+  }
+}

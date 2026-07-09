@@ -1,0 +1,26 @@
+:root {
+  --color-brand-primary: #0f766e;
+  --color-brand-secondary: #f59e0b;
+  --color-brand-accent: #2563eb;
+
+  --color-surface-canvas: #fffdf8;
+  --color-surface-card: #ffffff;
+
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #4b5563;
+
+  --font-family-heading: 'Baloo 2', 'Trebuchet MS', sans-serif;
+  --font-family-body: 'Source Serif 4', Georgia, serif;
+  --font-family-ui: 'Atkinson Hyperlegible', 'Segoe UI', sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-4: 16px;
+  --space-6: 24px;
+
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --motion-duration-fast: 120ms;
+  --motion-duration-base: 220ms;
+}

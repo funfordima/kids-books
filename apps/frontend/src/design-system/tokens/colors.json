@@ -1,0 +1,30 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "color": {
+    "brand": {
+      "primary": { "value": "#0F766E", "type": "color" },
+      "secondary": { "value": "#F59E0B", "type": "color" },
+      "accent": { "value": "#2563EB", "type": "color" }
+    },
+    "surface": {
+      "canvas": { "value": "#FFFDF8", "type": "color" },
+      "card": { "value": "#FFFFFF", "type": "color" },
+      "muted": { "value": "#F3F4F6", "type": "color" }
+    },
+    "text": {
+      "primary": { "value": "#1F2937", "type": "color" },
+      "secondary": { "value": "#4B5563", "type": "color" },
+      "inverse": { "value": "#FFFFFF", "type": "color" }
+    },
+    "status": {
+      "success": { "value": "#15803D", "type": "color" },
+      "warning": { "value": "#B45309", "type": "color" },
+      "error": { "value": "#B91C1C", "type": "color" },
+      "info": { "value": "#1D4ED8", "type": "color" }
+    },
+    "border": {
+      "subtle": { "value": "#E5E7EB", "type": "color" },
+      "strong": { "value": "#9CA3AF", "type": "color" }
+    }
+  }
+}

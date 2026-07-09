@@ -1,0 +1,32 @@
+name: governance-server
+version: 0.1.0
+mode: warning-only
+scope:
+  include:
+    - apps/frontend/**
+tools:
+  - name: aggregate_design_system_report
+    input:
+      paths:
+        - string
+    output:
+      warnings:
+        - source: string
+          file: string
+          line: number
+          message: string
+      summary:
+        totalWarnings: number
+        bySource:
+          designTokens: number
+          contentPolicy: number
+          storybookQA: number
+          visualRegression: number
+  - name: export_phase_evidence
+    input:
+      phase: string
+    output:
+      artifact: string
+prompts:
+  - name: darkfactory-design-gate-review
+    description: Produce consolidated design-system warnings for phase evidence

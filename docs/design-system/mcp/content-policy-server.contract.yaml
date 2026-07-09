@@ -1,0 +1,31 @@
+name: content-policy-server
+version: 0.1.0
+mode: warning-only
+scope:
+  include:
+    - apps/frontend/**/*.{ts,tsx,md,mdx}
+resources:
+  - uri: ds://content/style-guide
+    description: Canonical content style guide for UI copy
+tools:
+  - name: audit_ui_copy
+    input:
+      path: string
+    output:
+      warnings:
+        - code: string
+          file: string
+          line: number
+          message: string
+          suggestion: string
+  - name: check_readability
+    input:
+      text: string
+    output:
+      warnings:
+        - code: string
+          message: string
+          metric: string
+prompts:
+  - name: ux-copy-consistency-review
+    description: Review copy tone and clarity in changed files
