@@ -66,6 +66,7 @@ Primary customers are parents who want engaging, useful books that help children
 
 ### Template Uniqueness Rules (initial)
 
+- Uniqueness scope is global across the full public template catalog.
 - Uniqueness must consider both semantic similarity and normalized metadata fingerprint.
 - Normalized fingerprint excludes personal identifiers (names, direct personal details).
 - If semantic similarity is above threshold and fingerprint collision is detected, treat as duplicate.
