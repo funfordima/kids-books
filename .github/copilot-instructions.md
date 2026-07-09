@@ -60,6 +60,13 @@ This project uses a **DarkFactory multi-agent SDLC pipeline**. All agents operat
 - Remove unused code when it is no longer needed.
 - For complex tasks, use decomposition: plan, act, check.
 
+### Commit Policy
+- Every completed feature/user story must have a corresponding completion commit.
+- Use step-by-step commits for logical implementation slices (types/schema, core logic, API, tests, UI) instead of one large commit.
+- Every commit for a story must reference the issue number (for example `feat: add queue retry handling (#42)`).
+- Do not squash all work into a single catch-all commit before review.
+- If a story changes after review feedback, add follow-up fix commits (do not rewrite shared history).
+
 ### General
 - TypeScript `strict: true` — no `any`, no `!` non-null assertions on unknown values
 - Prettier + ESLint enforced (see `post-tool-use` hook)
