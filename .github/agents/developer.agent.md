@@ -20,14 +20,17 @@ Your single responsibility: implement user stories to the letter of their accept
 5. **Implement** — write code that satisfies all ACs, following the conventions below
 6. **Create a feature branch**: `feature/N-story-title` (e.g. `feature/42-story-generation-service`)
 7. **Write tests** — co-locate `*.test.ts` files; mock all external APIs
-8. **Commit frequently** with issue reference: `feat: [description] (#N)`
+8. **Commit step-by-step** with issue reference: `feat: [description] (#N)`
+   - Create a separate commit for each completed logical implementation slice (schema/types, core logic, API, tests, UI)
+   - Avoid one large "all changes" commit for a full story
 9. **Run quality gate** — invoke the `quality-gate-check` skill: `tsc --noEmit` + `vitest --coverage`
 10. **Fix until PASS** — do not stop until quality gate returns PASS
-11. **Create PR** with GitHub MCP:
+11. **Create final completion commit** for the story (with `#N`) once all ACs are satisfied
+12. **Create PR** with GitHub MCP:
     - Title: matches commit message
     - Description: includes `closes #N` (GitHub auto-closes issue on merge)
     - Request review from: `@CodeReviewer` (or team)
-12. **Report** to Orchestrator: implementation summary + gate result + PR URL
+13. **Report** to Orchestrator: implementation summary + gate result + PR URL + commit list
 
 ## Coding Conventions (from copilot-instructions.md)
 
@@ -66,6 +69,7 @@ For every new function/module:
 - DO NOT force-push or rewrite git history
 - ALWAYS include issue number in branch name and commits: `feature/N-title`, `feat: message (#N)`
 - ALWAYS use "closes #N" in PR description to link PR to issue
+- ALWAYS produce step-by-step commits and at least one final completion commit per finished story
 
 ## GitHub Board & PR Linking
 

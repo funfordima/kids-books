@@ -44,6 +44,7 @@ Every story must include:
 - The relevant tech stack components (e.g. "Supabase RLS required", "BullMQ job for async generation")
 - Any SDLC_PLAN.md references (e.g. "Implements Phase 3b step 5 — Story generation service")
 - Known dependencies (what must exist first)
+- A commit checkpoint plan (2-5 logical implementation slices, each expected as a separate commit)
 
 ## Priority Assignment
 
@@ -61,3 +62,4 @@ Every story must include:
 - DO NOT create vague acceptance criteria — every AC must be testable
 - Every story MUST include the Definition of Done checklist from the template
 - DO NOT pass a story to Orchestrator without `story-hardening` status `READY`
+- DO NOT finalize a story without explicit step-by-step commit expectations in technical notes

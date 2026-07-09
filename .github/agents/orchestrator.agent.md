@@ -60,6 +60,8 @@ For each task, execute this sequence in order:
 
 - **NEVER** advance past step 2 if story-hardening returns REFINE
 - **NEVER** advance past step 4 if quality-gate-check returns FAIL
+- **NEVER** advance to review without commit evidence for the story (`#N` referenced in commits)
+- **NEVER** accept a story as complete without a final completion commit tied to that story
 - **NEVER** mark a task complete if CodeReviewer returns REQUEST_CHANGES
 - **NEVER** advance to the next SDLC phase without ALL checklist items checked
 - If a gate fails, report the specific failure to the user and stop
@@ -83,6 +85,12 @@ The Orchestrator manages board state via GitHub MCP:
 - **Move issue to "Changes Requested"** when: CodeReviewer REQUEST_CHANGES
 - **Assign to Developer** when: story moves to "Ready for Dev"
 - **Link PR to issue** when: PR description includes "closes #N" (GitHub does this auto)
+
+## Commit Policy Enforcement
+
+- Require step-by-step implementation commits (logical slices), not one large catch-all commit
+- Require at least one completion commit for each finished story/feature
+- If commit history is missing or too coarse, route back for refinement before approval
 
 ## Constraints
 
