@@ -44,6 +44,43 @@ Primary customers are parents who want engaging, useful books that help children
 - ReferralProgram
 - Jobs (queue records for books and pictures)
 
+### Clarifications (2026-07-09)
+
+- Monorepo is required, with separate backend and frontend folders.
+- Content generation uses OpenAI text generation + DALL-E image generation.
+- Templates are ready-made customizable book templates.
+- Template ownership: parent users act as template admins and can create templates.
+- Template customization supports character names, illustrations, and similar editable parts.
+- PDF generation uses Puppeteer.
+- Payments and subscriptions use Stripe.
+- Deployment target uses Dockerfile-based builds and Dokploy.
+
+### Monorepo Structure (baseline)
+
+```text
+apps/
+  backend/      # NestJS API
+  frontend/     # Next.js web app
+packages/
+  shared/       # shared types, validation schemas, SDK utilities
+infra/
+  docker/       # docker-compose and local infra config (postgres, redis, minio)
+```
+
+### Step-by-Step Implementation Sequence (v1)
+
+1. Monorepo bootstrap with `apps/backend` and `apps/frontend` plus shared package.
+2. Local infrastructure via Docker Compose: PostgreSQL, Redis, MinIO.
+3. Backend foundation (NestJS): auth (Google OAuth), users, books, templates, jobs modules.
+4. Prisma schema + migrations for core entities (Users, Templates, Books, Characters, Pictures, Subscriptions, Ratings, ReferralProgram, Jobs).
+5. Queue pipeline (BullMQ + Redis) for book and picture generation jobs.
+6. AI integration (OpenAI + DALL-E) with moderation/safety checks before persistence.
+7. Frontend foundation (Next.js): auth flow, dashboard, template management, create-book wizard.
+8. Stripe subscription flow: checkout, webhook handling, subscription status sync.
+9. PDF export service using Puppeteer and secure download endpoint.
+10. Deployment packaging using Dockerfiles and Dokploy manifests for backend/frontend.
+11. QA gates: lint, typecheck, tests, coverage threshold, and smoke tests.
+
 
 ## Phase 0 — Investigation
 
