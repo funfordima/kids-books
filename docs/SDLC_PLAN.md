@@ -8,9 +8,9 @@
 | Output | Web reader + PDF download |
 | Illustrations | AI-generated per page (DALL-E 3) |
 | Business model | Monthly subscription — $9.99/mo, 7-day free trial |
-| Image queue | BullMQ + Upstash Redis (async, outside Vercel timeout limits) |
-| Auth | Supabase Auth (email + Google OAuth) — required for subscription model |
-| Deployment | Vercel (web) + Railway.app (worker) + Upstash Redis + Supabase |
+| Image queue | BullMQ + Redis (async processing) |
+| Auth | Google OAuth |
+| Deployment | Dockerfile-based builds with Dokploy |
 
 ---
 ## Requirements Override (2026-07-09)
@@ -158,41 +158,45 @@ Wonderbly's top complaints: "barely personalized", too expensive, physical deliv
 
 | Layer | Choice | Notes |
 |-------|--------|-------|
-| Frontend | Next.js 14 (App Router) + TypeScript | SSR, full-stack, Vercel native |
+| Frontend | Next.js 14 (App Router) + TypeScript | UI and web reader |
+| Backend API | NestJS + TypeScript | Domain logic, auth, API contracts |
 | Story AI | OpenAI GPT-4o | Structured JSON output per page |
 | Illustration AI | OpenAI DALL-E 3 | Per page, async via queue |
-| Job Queue | BullMQ + Upstash Redis | Async image gen; handles Vercel timeout limits |
-| Queue Worker | Railway.app (Node.js, always-on) | Long-running; consumes BullMQ jobs |
-| Auth | Supabase Auth | Email + Google OAuth; JWT; required for subscription |
-| Database | Supabase PostgreSQL | RLS for strict per-user data isolation |
-| Asset Storage | Supabase Storage | Generated images + PDFs |
-| PDF Generation | @react-pdf/renderer | React JSX → print-optimized PDF |
+| Job Queue | BullMQ + Redis | Async image generation pipeline |
+| Queue Worker | Node.js worker process | Long-running BullMQ consumer |
+| Auth | Google OAuth | Parent account sign-in flow |
+| Database | PostgreSQL + Prisma ORM | Typed data access and migrations |
+| Asset Storage | MinIO (local/test) + S3 (prod) | Generated images + PDFs |
+| PDF Generation | Puppeteer | HTML to PDF rendering |
 | Subscriptions | Stripe | Recurring billing; webhook-driven state |
 | Content Safety | OpenAI Moderation API | Mandatory; every story checked before save |
-| Deployment (web) | Vercel | Auto-deploys from GitHub main |
-| Deployment (worker) | Railway.app | Node.js worker; separate from Vercel |
-| Monitoring | Sentry + Vercel Analytics | Error tracking + usage metrics |
+| Deployment | Docker + Dokploy | Separate backend/frontend deployments |
+| Monitoring | Sentry + provider-native metrics | Error tracking + operational health |
 
 ### Deployment Architecture
 
 ```
 [Browser]
     │
-[Vercel — Next.js 14 App]
-    ├── Pages / UI
-    ├── /api/generate-story    → GPT-4o → DB → enqueue image jobs
-    ├── /api/book-status       → check job progress (client polls)
-    ├── /api/export-pdf        → @react-pdf/renderer
-    └── /api/webhooks/stripe   → subscription lifecycle events
-              │                          │
-    [Upstash Redis]            [Supabase]
-    (BullMQ Queue)             ├── PostgreSQL (users, books, pages)
-              │                ├── Auth (JWT, Google OAuth)
-    [Railway Worker]           └── Storage (images, PDFs)
-    (Node.js process)
+[Next.js Frontend App]
+  ├── Pages / UI
+  ├── Calls NestJS API (HTTPS)
+  └── Polls job/book status
+        │
+[NestJS API]
+  ├── Auth endpoints (Google OAuth)
+  ├── Books/templates/jobs endpoints
+  ├── Stripe webhooks
+  ├── Enqueue BullMQ jobs
+  └── PDF export via Puppeteer
+        │                          │
+     [Redis (BullMQ)]         [PostgreSQL + Prisma]
+        │                          │
+     [Worker Process]          [MinIO/S3 Object Storage]
+     (Node.js process)
     └── Consumes jobs
         → DALL-E 3 per page
-        → Upload to Supabase Storage
+    → Upload to MinIO/S3
         → Update page.image_url in DB
         → When all pages done → book.status = 'ready'
 ```
@@ -285,33 +289,32 @@ pages
 
 ## Auth Design
 
-- Supabase Auth: email/password + Google OAuth
-- JWT stored in httpOnly cookie; validated by Next.js middleware on every request
-- Session refresh handled by Supabase SSR client
+- Google OAuth for parent account sign-in
+- Backend-managed auth/session validation on protected endpoints
 - **Protected routes**: `/dashboard`, `/create`, `/book/[id]`, `/account`
 - **Public routes**: `/`, `/login`, `/signup`, `/pricing`
-- Middleware checks JWT validity AND `subscription_status` from DB on protected routes
-- **RLS policies**: `auth.uid() = user_id` on all tables — strict cross-user isolation
+- Backend checks ownership and `subscription_status` before serving protected resources
+- Data isolation enforced in NestJS guards/services with per-user ownership checks
 - COPPA-aware: only parents create accounts; no direct child data collected
 
 ---
 
-## Queue Architecture (BullMQ + Upstash Redis)
+## Queue Architecture (BullMQ + Redis)
 
 ```
 1. POST /api/generate-story
    → Validate input with Zod
    → Call GPT-4o → structured JSON (title + array of {text, illustration_description})
    → Run OpenAI Moderation API on full story text; reject if flagged
-   → INSERT book (status: 'generating') + all pages into Supabase
+  → INSERT book (status: 'generating') + all pages via Prisma
    → Enqueue one BullMQ job per page: { book_id, page_id, illustration_description, style }
    → Return { book_id } to client immediately
 
-2. Railway Worker (always-on Node.js process)
+2. Worker (always-on Node.js process)
    → Consume jobs from BullMQ
    → Build DALL-E 3 prompt: "{illustration_description}, {style}, children's book
       illustration, vibrant colors, safe for children, no text, no letters"
-   → Call DALL-E 3 API → upload image to Supabase Storage
+  → Call DALL-E 3 API → upload image to MinIO/S3
    → UPDATE pages SET image_url = '...' WHERE id = page_id
    → When all pages for a book are done → UPDATE books SET status = 'ready'
    → On failure: retry up to 3× with exponential backoff (1s, 5s, 30s)
@@ -323,7 +326,7 @@ pages
 ```
 
 Queue configuration:
-- Upstash Redis: serverless, TLS, Vercel-compatible, pay-per-use
+- Redis: shared queue backend for API + worker
 - BullMQ concurrency: 3 jobs at once per worker (DALL-E 3 rate limit buffer)
 - Job retry: 3 attempts, exponential backoff
 - Job TTL: 24 hours
@@ -333,20 +336,20 @@ Queue configuration:
 ## Phase 1 — Requirements & Analysis
 
 ### Functional Requirements
-1. User registration / login (email + Google OAuth via Supabase)
+1. User registration / login (Google OAuth)
 2. Subscription management (Stripe — 7-day free trial, then $9.99/month)
 3. 5-step book creation wizard (see Configuration Options above)
 4. AI story generation: GPT-4o → structured JSON → 8 / 12 / 16 pages
 5. Async AI illustration: DALL-E 3 via BullMQ → per page → progressive display
 6. Web book reader: page-flip UI, progressive image loading, mobile responsive
-7. PDF export: @react-pdf/renderer, print-optimized, authenticated endpoint
+7. PDF export: Puppeteer-based rendering, print-optimized, authenticated endpoint
 8. User library: all books, status badges, re-read, regenerate, delete
 9. Book sharing via unique read-only link (optional feature)
 
 ### Non-Functional Requirements
 - COPPA-aware: parents create accounts; no child personal data collected directly
 - Content safety: OpenAI Moderation API on every generated story before DB write
-- Data isolation: Supabase RLS enforced on all tables
+- Data isolation: strict ownership checks on all protected resources
 - Performance: story generation P95 < 30s; first page image < 60s; all images < 3 min
 - Accessibility: WCAG 2.1 AA on the book reader
 - Security: all OpenAI API keys server-side only; inputs validated with Zod; Stripe webhook signatures verified; HTTPS enforced
@@ -411,10 +414,10 @@ vibrant warm colors, safe for children, no text, no words, no letters, no number
 
 | Risk | Mitigation |
 |------|-----------|
-| A01 Broken Access Control | Supabase RLS (`auth.uid() = user_id`); middleware route guards |
+| A01 Broken Access Control | Ownership checks in NestJS guards/services on every protected endpoint |
 | A02 Cryptographic Failures | HTTPS enforced; secrets in env vars only; never in client bundle |
-| A03 Injection | Zod validation on all API inputs; Supabase SDK parameterized queries |
-| A07 Auth Failures | Supabase JWT in httpOnly cookie; session refresh; rate limiting |
+| A03 Injection | Zod validation on all API inputs; Prisma parameterized query APIs |
+| A07 Auth Failures | Google OAuth token/session validation; secure callback handling; rate limiting |
 | A09 Logging Failures | Sentry for errors; no PII in logs |
 | Stripe | `stripe.webhooks.constructEvent()` signature verification on every webhook |
 | OpenAI | Moderation API blocks any story with flagged content before it reaches DB |
@@ -424,14 +427,14 @@ vibrant warm colors, safe for children, no text, no words, no letters, no number
 ## Phase 3 — Implementation
 
 ### 3a — Foundation (parallel)
-1. **Project scaffold** — `npx create-next-app@latest` with TypeScript, Tailwind CSS, App Router, ESLint, Prettier
-2. **Supabase setup** — project creation, DB schema migrations, Supabase Auth (email + Google OAuth), RLS policies, Storage buckets (`book-images`, `book-pdfs`)
-3. **Stripe setup** — products + prices (trial + monthly), Checkout Session, Customer Portal, webhook endpoint
-4. **Queue setup** — Upstash Redis instance, BullMQ queue definitions, Railway worker project scaffold
+1. **Monorepo scaffold** — `apps/backend` (NestJS), `apps/frontend` (Next.js), `packages/shared`
+2. **Local infra setup** — Docker Compose for PostgreSQL, Redis, MinIO
+3. **Backend setup** — Google OAuth flow, Prisma base schema, core module scaffolding
+4. **Queue setup** — BullMQ queue definitions + worker scaffold connected to Redis
 
 ### 3b — Core AI Services (depends on 3a)
 5. **Story generation service** — prompt builder (theme + age band + educational sub-type) → GPT-4o structured call → Moderation API check → DB save → enqueue image jobs
-6. **Image generation worker** (Railway) — BullMQ consumer → DALL-E 3 → Supabase Storage upload → DB update → completion signal
+6. **Image generation worker** — BullMQ consumer → DALL-E 3 → MinIO/S3 upload → DB update → completion signal
 
 ### 3c — UI (parallel with 3b, depends on 3a)
 7. **Auth UI** — login, signup, Google OAuth callback pages
@@ -441,7 +444,7 @@ vibrant warm colors, safe for children, no text, no words, no letters, no number
 
 ### 3d — Business Layer (parallel with 3b)
 11. **Subscription flow** — pricing page → Stripe Checkout → success/cancel → webhook handler → DB update
-12. **PDF export** — @react-pdf/renderer layout matching web reader, authenticated `/api/export-pdf` endpoint
+12. **PDF export** — Puppeteer layout matching web reader, authenticated `/api/export-pdf` endpoint
 
 ### 3e — Polish
 13. **Onboarding** — first-time user wizard, curated example books to preview
@@ -459,7 +462,7 @@ vibrant warm colors, safe for children, no text, no words, no letters, no number
 | E2E | signup → subscribe → wizard → generate → read → PDF | Playwright | Full happy path green |
 | Content Safety | Adversarial inputs attempting bad output | Manual + automated | 0 flagged content reaches DB |
 | Queue Resilience | DALL-E 3 failure → retry; job TTL expiry | Vitest | Retry logic works; no zombie jobs |
-| Auth Isolation | Cross-user book access attempt | Playwright | 403 / RLS blocks all cross-user reads |
+| Auth Isolation | Cross-user book access attempt | Playwright | 403 / ownership guard blocks all cross-user reads |
 | Performance | Story generation, first image, all images | Playwright timing | P95: story <30s, first image <60s, all <3min |
 | Accessibility | Web reader | axe-core + manual | Lighthouse a11y ≥ 90; keyboard nav works |
 
@@ -503,13 +506,15 @@ coverage: {
 
 | Service | Provider | Purpose |
 |--------|---------|---------|
-| Web app | Vercel | Next.js hosting, CDN, preview deploys on PRs |
-| Worker | Railway.app | Always-on Node.js BullMQ consumer |
-| Queue | Upstash Redis | Serverless Redis; TLS; pay-per-use |
-| DB + Auth + Storage | Supabase | PostgreSQL, GoTrue auth, file storage |
+| Frontend | Dokploy-managed container | Next.js web app deployment |
+| Backend API | Dokploy-managed container | NestJS API deployment |
+| Worker | Dokploy-managed container | BullMQ consumer for generation jobs |
+| Queue | Redis | BullMQ backend |
+| Database | PostgreSQL | Application data store via Prisma |
+| Object storage | MinIO (local/test) + S3 (prod) | Image and PDF assets |
 | Payments | Stripe | Subscription billing + webhooks |
 | Error tracking | Sentry | Real-time error alerting |
-| Analytics | Vercel Analytics | Page views, Core Web Vitals |
+| Metrics | Provider-native metrics | Service/resource monitoring |
 
 ### Environment Variables Required
 
@@ -517,35 +522,44 @@ coverage: {
 # OpenAI
 OPENAI_API_KEY=
 
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=       # server-side only, never in client
+# Backend/Data
+DATABASE_URL=
+REDIS_URL=
 
 # Stripe
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 
-# Upstash Redis
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
+# Google OAuth
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Object Storage
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+S3_BUCKET=
+S3_REGION=
+S3_ENDPOINT=                      # required for MinIO in local/test
 
 # Sentry
 SENTRY_DSN=
+
+# Public frontend config
+NEXT_PUBLIC_API_BASE_URL=
 ```
 
 ### Go-Live Checklist
-- [ ] All env vars set in Vercel dashboard + Railway dashboard
+- [ ] All env vars set in deployment environment dashboards
 - [ ] No secrets in source code or git history
-- [ ] Supabase RLS enabled and verified on all tables
+- [ ] Ownership checks and authorization guards verified on protected endpoints
 - [ ] Stripe webhook endpoint registered and signature verification passing
 - [ ] OpenAI Moderation API tested with edge-case inputs in production
-- [ ] Railway worker deployed and consuming jobs from Upstash
+- [ ] Worker deployed and consuming jobs from Redis
 - [ ] Smoke test: account creation → subscription → book generated → PDF downloaded
 - [ ] Sentry receiving test event
-- [ ] Custom domain configured; TLS active (Vercel auto-provisions)
-- [ ] Vercel Analytics enabled
+- [ ] Custom domain configured; TLS active
+- [ ] Metrics dashboard reachable for frontend/backend/worker
 
 ---
 
@@ -575,7 +589,7 @@ SENTRY_DSN=
 ## Verification Checklist
 
 - [ ] **Phase 1**: Requirements reviewed; age-type matrix confirmed; prompt templates reviewed for child safety
-- [ ] **Phase 2**: Architecture diagram approved; DB schema reviewed; RLS policies verified
+- [ ] **Phase 2**: Architecture diagram approved; DB schema reviewed; ownership and authz model verified
 - [ ] **Phase 3**: All features implemented; zero TypeScript errors; zero console errors in production build
 - [ ] **Phase 4**: All tests green; **unit test coverage ≥ 65% verified in CI**; Lighthouse accessibility ≥ 90; zero content safety failures; auth isolation verified
 - [ ] **Phase 5**: Smoke test passes; Stripe test payment processed end-to-end; Sentry receiving events; all env vars verified

@@ -11,8 +11,8 @@
 | Auth | Google OAuth |
 | Asset Storage | MinIO (local/test, S3 compatible) + AWS S3 (production) |
 | Local Infrastructure | Docker / Docker Compose |
-| PDF | @react-pdf/renderer |
-| Deployment | Frontend + Backend deployment split (provider TBD by environment) |
+| PDF | Puppeteer |
+| Deployment | Dockerfile-based builds with Dokploy |
 | Testing | Vitest + V8 coverage + Playwright (E2E) |
 | Monitoring | Sentry + provider-native metrics |
 

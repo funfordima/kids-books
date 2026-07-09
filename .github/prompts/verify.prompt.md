@@ -26,7 +26,7 @@ Independent final verification. This phase confirms the phase gate is met before
 - [ ] `npx vitest run --coverage` exits 0
 - [ ] Line coverage ≥ 65% (from coverage report)
 - [ ] Branch coverage ≥ 65% (from coverage report)
-- [ ] All E2E tests passing (Playwright, if configured)
+- [ ] Run `e2e-gate-check` skill and require `Status: PASS`
 - [ ] Accessibility: Lighthouse a11y ≥ 90 on book reader (if applicable)
 - [ ] Zero content safety test failures
 
@@ -57,6 +57,11 @@ If BLOCKED:
   Blocking items:
   1. [specific issue — what must be done to clear it]
 ```
+
+## Evidence Collection Notes
+- Use `quality-gate-check` for TypeScript and Vitest coverage evidence.
+- Use `e2e-gate-check` for Playwright E2E evidence.
+- If E2E is `BLOCKED` due to missing configuration, gate status remains `BLOCKED` unless a user-approved temporary waiver is explicitly documented.
 
 ## DarkFactory Rule
 Only the Orchestrator may update the `docs/SDLC_PLAN.md` checklist after VERIFY returns CLEAR.

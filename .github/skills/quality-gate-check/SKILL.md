@@ -7,6 +7,8 @@ description: "Runs the DarkFactory quality gate: TypeScript compilation check + 
 
 Runs the full DarkFactory evidence gate for this project. No task is "done" and no phase advances without passing both checks.
 
+Scope note: this skill validates TypeScript and unit/integration test coverage only. Use `e2e-gate-check` for Playwright E2E verification.
+
 ## When to Use
 - Developer agent has finished implementing a user story
 - Orchestrator is evaluating whether to accept work as complete
@@ -67,3 +69,6 @@ FAIL — resolve the following before proceeding:
 
 ## Script Reference
 Run [run-gates.sh](./scripts/run-gates.sh) on Linux/macOS or [run-gates.ps1](./scripts/run-gates.ps1) on Windows for a single-command gate check.
+
+## Related Skill
+- `e2e-gate-check` — required for Phase 4 to Phase 5 verification of Playwright tests.

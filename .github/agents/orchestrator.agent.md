@@ -8,6 +8,9 @@ handoffs:
   - label: "Create user story"
     agent: ProjectManager
     prompt: "Use the user-story-format skill to create a detailed GitHub issue for this SDLC task: {{task}}"
+  - label: "Harden story requirements"
+    agent: ProjectManager
+    prompt: "Run the story-hardening skill on this drafted story and return READY/REFINE findings with revised ACs: {{story}}"
   - label: "Implement story"
     agent: Developer
     prompt: "Implement the following user story. Run the quality-gate-check skill when done: {{story}}"
@@ -43,18 +46,20 @@ For each task, execute this sequence in order:
 
 ```
 [1] ProjectManager → Create GitHub issue + add to board (Status: Backlog)
-[2] Orchestrator → Move issue to "Ready for Dev" + assign to Developer
-[3] Developer      → Implement the story (Status: In Progress)
-[4] quality-gate-check skill → tsc + Vitest coverage ≥65%  ← GATE
-[5] Developer → Create PR with "closes #N" + move issue to "In Review"
-[6] CodeReviewer   → Review implementation (Status: In Review)
-[7] If APPROVE → CodeReviewer moves issue to "Done", Orchestrator updates SDLC checklist, commit checkpoint
+[2] ProjectManager → story-hardening skill run (READY required)
+[3] Orchestrator → Move issue to "Ready for Dev" + assign to Developer
+[4] Developer      → Implement the story (Status: In Progress)
+[5] quality-gate-check skill → tsc + Vitest coverage ≥65%  ← GATE
+[6] Developer → Create PR with "closes #N" + move issue to "In Review"
+[7] CodeReviewer   → Review implementation (Status: In Review)
+[8] If APPROVE → CodeReviewer moves issue to "Done", Orchestrator updates SDLC checklist, commit checkpoint
     If REQUEST_CHANGES → issue moves to "Changes Requested", send back to Developer with findings
 ```
 
 ## Gate Enforcement Rules
 
-- **NEVER** advance past step 3 if quality-gate-check returns FAIL
+- **NEVER** advance past step 2 if story-hardening returns REFINE
+- **NEVER** advance past step 4 if quality-gate-check returns FAIL
 - **NEVER** mark a task complete if CodeReviewer returns REQUEST_CHANGES
 - **NEVER** advance to the next SDLC phase without ALL checklist items checked
 - If a gate fails, report the specific failure to the user and stop

@@ -15,17 +15,20 @@ Your single responsibility: convert SDLC tasks from `docs/SDLC_PLAN.md` into pre
 
 1. **Read the SDLC task** — understand the full context from `docs/SDLC_PLAN.md`
 2. **Use the `user-story-format` skill** — load the story template and fill it completely
-3. **Create a GitHub issue** via the GitHub MCP tool with:
+3. **Run the `story-hardening` skill** on the draft story:
+   - If `READY`, continue
+   - If `REFINE`, revise acceptance criteria and technical notes, then rerun until `READY`
+4. **Create a GitHub issue** via the GitHub MCP tool with:
    - Title: concise feature name
    - Body: filled story template (user story + AC + technical notes + DoD)
    - Labels: `darkfactory`, `phase-N`, `story`, `P0`/`P1`/`P2`
    - Milestone: SDLC Phase N (create if it doesn't exist)
-4. **Add to GitHub Projects board** via GitHub MCP:
+5. **Add to GitHub Projects board** via GitHub MCP:
    - Project: "DarkFactory SDLC" (or repo default project)
    - Status: "Backlog"
    - Phase field: Phase N
    - Priority field: P0/P1/P2
-5. **Return** the GitHub issue URL + the story text to the Orchestrator
+6. **Return** the GitHub issue URL + the story text + hardening report to the Orchestrator
 
 ## Acceptance Criteria Quality Bar
 
@@ -57,3 +60,4 @@ Every story must include:
 - DO NOT create stories for work outside the SDLC plan
 - DO NOT create vague acceptance criteria — every AC must be testable
 - Every story MUST include the Definition of Done checklist from the template
+- DO NOT pass a story to Orchestrator without `story-hardening` status `READY`
