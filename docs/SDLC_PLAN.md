@@ -49,11 +49,28 @@ Primary customers are parents who want engaging, useful books that help children
 - Monorepo is required, with separate backend and frontend folders.
 - Content generation uses OpenAI text generation + DALL-E image generation.
 - Templates are ready-made customizable book templates.
-- Template ownership: parent users act as template admins and can create templates.
+- Public templates are created automatically by the system from parent story ideas.
 - Template customization supports character names, illustrations, and similar editable parts.
+- Public templates must be privacy-safe and must not contain direct personal details from the source request.
 - PDF generation uses Puppeteer.
 - Payments and subscriptions use Stripe.
 - Deployment target uses Dockerfile-based builds and Dokploy.
+
+### Public Template Generation Policy
+
+1. Parent submits a story idea for a personalized book.
+2. System generates the personalized book content and a template-safe generalized variant.
+3. Before publishing a template, system runs uniqueness checks against existing public templates.
+4. Only unique templates are added to the public template catalog.
+5. Non-unique templates are stored only as private/personalized output and are not added to public templates.
+
+### Template Uniqueness Rules (initial)
+
+- Uniqueness must consider both semantic similarity and normalized metadata fingerprint.
+- Normalized fingerprint excludes personal identifiers (names, direct personal details).
+- If semantic similarity is above threshold and fingerprint collision is detected, treat as duplicate.
+- Duplicate templates are not published to public catalog.
+- Keep an auditable decision trail for why a candidate template was accepted or rejected.
 
 ### Monorepo Structure (baseline)
 
@@ -75,11 +92,12 @@ infra/
 4. Prisma schema + migrations for core entities (Users, Templates, Books, Characters, Pictures, Subscriptions, Ratings, ReferralProgram, Jobs).
 5. Queue pipeline (BullMQ + Redis) for book and picture generation jobs.
 6. AI integration (OpenAI + DALL-E) with moderation/safety checks before persistence.
-7. Frontend foundation (Next.js): auth flow, dashboard, template management, create-book wizard.
+7. Frontend foundation (Next.js): auth flow, dashboard, public template catalog, create-book wizard.
 8. Stripe subscription flow: checkout, webhook handling, subscription status sync.
 9. PDF export service using Puppeteer and secure download endpoint.
-10. Deployment packaging using Dockerfiles and Dokploy manifests for backend/frontend.
-11. QA gates: lint, typecheck, tests, coverage threshold, and smoke tests.
+10. Public template publication workflow with deduplication and moderation checks.
+11. Deployment packaging using Dockerfiles and Dokploy manifests for backend/frontend.
+12. QA gates: lint, typecheck, tests, coverage threshold, and smoke tests.
 
 
 ## Phase 0 — Investigation
