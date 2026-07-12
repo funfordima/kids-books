@@ -1,9 +1,22 @@
 # User Story Template
 
-**Title**: [Concise feature name, ≤80 chars]
-**Phase**: Phase N — [Phase Name]
-**Priority**: P0 / P1 / P2
+**Title**: [Concise feature name, <=80 chars]  
+**Phase**: Phase N - [Phase Name]  
+**Priority**: P0 / P1 / P2  
 **Labels**: `darkfactory`, `phase-N`, `story`, `P1`
+
+---
+
+## Product Context
+
+Explain the feature in enough detail for a human developer who has not participated in refinement.
+
+- Product problem:
+- Expected user/system behavior:
+- Primary user flow:
+- Out of scope:
+- Dependencies / predecessor stories:
+- Feature refinement brief:
 
 ---
 
@@ -20,17 +33,28 @@
 - [ ] **AC-1**: Given [precondition], When [action], Then [observable result]
 - [ ] **AC-2**: Given [precondition], When [action], Then [observable result]
 - [ ] **AC-3**: Given [precondition], When [action], Then [observable result]
-- [ ] **AC-4 (error case)**: Given [invalid condition], When [action], Then [error handling behavior]
+- [ ] **AC-4**: Given [precondition], When [action], Then [observable result]
+- [ ] **AC-5 (failure path)**: Given [invalid or failure condition], When [action], Then [error handling behavior]
 
 ---
 
 ## Technical Notes
 
-> Stack-specific constraints, implementation hints, and dependencies.
+- Must use:
+- Must not use:
+- Depends on:
+- References:
+- Data/security constraints:
+- Testing notes:
+- Commit checkpoint plan:
 
-- Must use: [relevant tech, e.g. backend ownership checks, Zod validation, BullMQ queue]
-- Depends on: [prior story or infrastructure that must exist first]
-- References: [relevant section of SDLC_PLAN.md]
+---
+
+## Required Role Subtasks
+
+- [ ] **Developer subtask**: implement [specific scope], update only this subtask with commits and implementation notes.
+- [ ] **Tester / QualityGate subtask**: run [specific gates], update only this subtask with command evidence and PASS/FAIL/BLOCKED.
+- [ ] **CodeReviewer subtask**: review [specific PR/story], update only this subtask with APPROVE/REQUEST_CHANGES and findings.
 
 ---
 
@@ -38,10 +62,13 @@
 
 - [ ] TypeScript compiles clean (`tsc --noEmit` exits 0)
 - [ ] Unit tests written and passing for all new logic
-- [ ] Vitest coverage ≥ 65% maintained (run `npx vitest run --coverage`)
-- [ ] All external APIs/dependencies mocked in tests (OpenAI, Stripe, DB wrapper, queue/storage)
-- [ ] Code reviewed by `@code-reviewer` agent
-- [ ] Security checklist passed (see `security-audit` skill)
+- [ ] Vitest coverage >= 65% maintained
+- [ ] Tester / QualityGate subtask is PASS
+- [ ] Developer, Tester, and CodeReviewer subtasks are updated
+- [ ] All external APIs/dependencies mocked in tests where applicable
+- [ ] Security checklist passed
 - [ ] No `console.log` in production code paths
 - [ ] No secrets in source code
-- [ ] Committed to git with message referencing this issue (`closes #N`)
+- [ ] Code reviewed by CodeReviewer agent
+- [ ] PR targets `development`
+- [ ] PR description includes `closes #N`
