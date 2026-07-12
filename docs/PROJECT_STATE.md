@@ -75,7 +75,7 @@ Required update checklist:
 - Added a minimal NestJS backend and Next.js 14 App Router frontend with strict TypeScript configurations.
 - Added the consumable `@kids-books/shared` package and referenced its exported version contract from both applications.
 - Added minimal co-located Vitest scaffold checks without introducing later-step product functionality.
-- Verification evidence: `git diff --exit-code -- apps/frontend/src/design-system` passed, confirming tracked design-system content is unchanged. Runtime build, typecheck, lint, and tests could not be executed because Node.js, npm, and TypeScript are not installed in the offline environment; dependencies were intentionally not downloaded or installed.
+- Verification evidence: `git diff --exit-code -- apps/frontend/src/design-system` passed, confirming tracked design-system content is unchanged. `npm install` completed with a generated lockfile using a portable Node.js 20 runtime; npm reported dependency audit findings (3 low, 12 moderate, 8 high, 1 critical) from the initial scaffold dependency graph. Build, typecheck, lint, and test gates could not be completed because the portable `node.exe` began hanging even for `node -v` after dependency installation in this local environment.
 
 
 ### 2026-07-09 - Initial project state snapshot documented
