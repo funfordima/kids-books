@@ -63,4 +63,4 @@ Open questions:
 
 ## Decision Rule
 
-If product behavior is still unclear, return `REFINE` and create/update a refinement issue. Do not create Developer tasks from unclear product intent.
+If product behavior is still unclear, return `REFINE` and create/update a refinement issue. Do not create Developer subtasks from unclear product intent.

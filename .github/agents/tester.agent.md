@@ -42,7 +42,7 @@ Your single responsibility is to verify that a story satisfies its quality gates
 ```text
 === Quality Gate Report ===
 Story: #N - [title]
-Tester task: #M - [title]
+Tester subtask: #M - [title]
 
 Result: PASS | FAIL | BLOCKED
 

@@ -64,7 +64,7 @@ For each task, execute this sequence in order:
 [6] Tester → Run quality gates: tsc + Vitest coverage ≥65% + story-specific checks
 [7] Developer → Create PR with "closes #N" + move parent story to "In Review" only after Tester PASS
 [8] CodeReviewer → Review implementation (Status: In Review)
-[9] If APPROVE → CodeReviewer moves reviewer task to Done, Orchestrator verifies all role tasks before parent Done
+[9] If APPROVE → CodeReviewer moves reviewer subtask to Done, Orchestrator verifies all role subtasks before parent Done
     If REQUEST_CHANGES → issue moves to "Changes Requested", send back to Developer with findings
 ```
 
@@ -73,7 +73,7 @@ For each task, execute this sequence in order:
 - **NEVER** advance past step 2 if story-hardening returns REFINE
 - **NEVER** advance past step 4 if quality-gate-check returns FAIL
 - **NEVER** create implementation stories from `docs/SDLC_PLAN.md` alone; feature refinement and product behavior are required
-- **NEVER** accept plain-text task bodies; all parent stories and subtasks must be structured Markdown
+- **NEVER** accept plain-text story or subtask bodies; all parent stories and subtasks must be structured Markdown
 - **NEVER** allow one agent to create the story, implement it, test it, review it, and merge it
 - **NEVER** mark a parent story Done unless Developer, Tester, and CodeReviewer subtasks are Done
 - **NEVER** advance to review without commit evidence for the story (`#N` referenced in commits)

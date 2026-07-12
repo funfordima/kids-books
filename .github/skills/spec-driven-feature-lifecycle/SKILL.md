@@ -61,7 +61,7 @@ Translate the specification into project-aware technical constraints:
 
 ### 5. Task Breakdown
 
-Create board-visible Markdown tasks:
+Create board-visible Markdown subtasks:
 
 - Parent user story
 - Developer subtask

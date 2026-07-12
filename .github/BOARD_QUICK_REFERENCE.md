@@ -19,9 +19,9 @@ Every implementable feature has:
 - Tester / QualityGate subtask
 - CodeReviewer subtask
 
-ProjectManager creates all of these before development starts. Each agent updates only its own task.
+ProjectManager creates all of these before development starts. Each agent updates only its own subtask.
 
-All parent stories and subtasks must use structured Markdown task descriptions.
+All parent stories and subtasks must use structured Markdown descriptions.
 
 ## Agent State Transition Matrix
 
@@ -35,7 +35,7 @@ All parent stories and subtasks must use structured Markdown task descriptions.
 | Tester | In Progress | Run gates | In Progress or blocked | Tester subtask PASS/FAIL/BLOCKED |
 | Developer | Tester PASS | Open PR into `development` | In Review | PR with `closes #N` |
 | CodeReviewer | In Review | Review PR + security | Done or Changes Requested | Review report |
-| Orchestrator | Role tasks Done | Verify parent story | Done | Parent issue status |
+| Orchestrator | Role subtasks Done | Verify parent story | Done | Parent issue status |
 | Integrator | Approved PR | Merge feature into `development` | Done | Merge commit |
 
 ## Branch Naming

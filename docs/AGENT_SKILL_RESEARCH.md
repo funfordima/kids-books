@@ -55,7 +55,7 @@ The useful idea is durable Markdown state for long-running agent work. DarkFacto
 
 Adopted locally:
 
-- The rule that task descriptions and role updates must be Markdown and survive context loss.
+- The rule that subtask descriptions and role updates must be Markdown and survive context loss.
 - Board issues remain the canonical durable state.
 
 ## SDD Skill Findings

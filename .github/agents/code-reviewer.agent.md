@@ -52,6 +52,6 @@ Your single responsibility is independent, adversarial, read-only review. You ne
 - Do not approve before Tester / QualityGate reports PASS.
 - Do not review your own work.
 - Do not merge branches.
-- Do not mark the parent story Done; Orchestrator verifies all role tasks first.
+- Do not mark the parent story Done; Orchestrator verifies all role subtasks first.
 - Always update only the CodeReviewer subtask and PR review/comment.
 - Follow `docs/AGENT_SYSTEM_OPERATING_MODEL.md`.

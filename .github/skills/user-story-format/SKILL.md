@@ -62,7 +62,7 @@ Subtasks:
 - `darkfactory`
 - `phase-N`
 - `subtask`
-- `developer-task` / `tester-task` / `reviewer-task`
+- `developer-subtask` / `tester-subtask` / `reviewer-subtask`
 
 ## Story Template
 
