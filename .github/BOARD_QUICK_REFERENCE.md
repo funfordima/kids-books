@@ -21,12 +21,14 @@ Every implementable feature has:
 
 ProjectManager creates all of these before development starts. Each agent updates only its own task.
 
+All parent stories and subtasks must use structured Markdown task descriptions.
+
 ## Agent State Transition Matrix
 
 | Agent | Current Status | Action | Next Status | Evidence |
 |-------|----------------|--------|-------------|----------|
 | ProjectManager | none | Run feature refinement | Backlog or refinement blocked | Feature brief |
-| ProjectManager | none | Create parent story + role subtasks | Backlog | Parent and subtask URLs |
+| ProjectManager | none | Create Markdown parent story + role subtasks | Backlog | Parent and subtask URLs |
 | Orchestrator | Backlog | Confirm refinement + hardening READY | Ready for Dev | Board update |
 | Developer | Ready for Dev | Start implementation branch | In Progress | Branch `feature/N-title` |
 | Developer | In Progress | Commit implementation slices | In Progress | Commits with `#N` |
@@ -86,3 +88,7 @@ Agents must not run browser/device OAuth login during normal workflow.
 ## Product Refinement Rule
 
 Stories must not be created from `docs/SDLC_PLAN.md` alone. ProjectManager must also use feature refinement and current product context. If the product behavior is unclear, create/update a refinement issue instead of creating Developer work.
+
+## Markdown Task Rule
+
+Use the `markdown-task-format` skill for every parent issue, role subtask, PR description, and evidence update.

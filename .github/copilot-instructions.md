@@ -54,6 +54,8 @@ Additional operating rules:
 - Use non-interactive GitHub access for routine agent work; see `.github/AGENT_GITHUB_ACCESS.md`.
 - Do not rely on browser/device OAuth inside agent workflows.
 - ProjectManager must run feature refinement before creating implementation stories.
+- ProjectManager must use `spec-driven-feature-lifecycle` before creating implementation stories.
+- All task descriptions, PR descriptions, and role evidence updates must be structured Markdown.
 - Stories must include enough product context for a human developer who does not know the task.
 - Every parent story must have Developer, Tester / QualityGate, and CodeReviewer subtasks.
 - Each agent updates only its own assigned task.

@@ -7,10 +7,10 @@ user-invocable: true
 handoffs:
   - label: "Refine feature"
     agent: ProjectManager
-    prompt: "Use the feature-refinement skill to turn this SDLC/product capability into an implementation-ready feature brief: {{task}}"
+    prompt: "Use spec-driven-feature-lifecycle, feature-refinement, and markdown-task-format to turn this SDLC/product capability into an implementation-ready feature brief: {{task}}"
   - label: "Create user story"
     agent: ProjectManager
-    prompt: "Use feature-refinement, user-story-format, and story-hardening to create a detailed parent issue plus Developer, Tester, and CodeReviewer subtasks for this feature: {{task}}"
+    prompt: "Use spec-driven-feature-lifecycle, feature-refinement, markdown-task-format, user-story-format, and story-hardening to create a detailed Markdown parent issue plus Developer, Tester, and CodeReviewer subtasks for this feature: {{task}}"
   - label: "Harden story requirements"
     agent: ProjectManager
     prompt: "Run the story-hardening skill on this drafted story and return READY/REFINE findings with revised ACs: {{story}}"
@@ -56,8 +56,8 @@ Your single responsibility: enforce the SDLC pipeline defined in `docs/SDLC_PLAN
 For each task, execute this sequence in order:
 
 ```
-[1] ProjectManager → feature-refinement skill run (READY required)
-[2] ProjectManager → Create parent user story + Developer/Tester/CodeReviewer subtasks + add all to board
+[1] ProjectManager → spec-driven-feature-lifecycle + feature-refinement skill run (READY required)
+[2] ProjectManager → Create Markdown parent user story + Developer/Tester/CodeReviewer subtasks + add all to board
 [3] ProjectManager → story-hardening skill run on parent story (READY required)
 [4] Orchestrator → Move parent story to "Ready for Dev" and route subtasks
 [5] Developer → Implement only the Developer subtask (Status: In Progress)
@@ -73,6 +73,7 @@ For each task, execute this sequence in order:
 - **NEVER** advance past step 2 if story-hardening returns REFINE
 - **NEVER** advance past step 4 if quality-gate-check returns FAIL
 - **NEVER** create implementation stories from `docs/SDLC_PLAN.md` alone; feature refinement and product behavior are required
+- **NEVER** accept plain-text task bodies; all parent stories and subtasks must be structured Markdown
 - **NEVER** allow one agent to create the story, implement it, test it, review it, and merge it
 - **NEVER** mark a parent story Done unless Developer, Tester, and CodeReviewer subtasks are Done
 - **NEVER** advance to review without commit evidence for the story (`#N` referenced in commits)

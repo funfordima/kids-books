@@ -10,9 +10,10 @@ This project must be implemented through the DarkFactory agent system. The goal 
 2. `development` is the integration branch.
 3. Every implementation story uses a dedicated feature branch: `feature/N-short-title`.
 4. Every work item must be visible on the GitHub Project board before implementation starts.
-5. No single agent may create the story, implement it, test it, review it, and merge it.
-6. Every role updates its own assigned task or subtask on the board.
-7. A story is not Done until quality gates pass and the CodeReviewer approves.
+5. Every work item description must be structured Markdown.
+6. No single agent may create the story, implement it, test it, review it, and merge it.
+7. Every role updates its own assigned task or subtask on the board.
+8. A story is not Done until quality gates pass and the CodeReviewer approves.
 
 ## Required Agent Roles
 
@@ -102,12 +103,36 @@ Stories must not be generated from `docs/SDLC_PLAN.md` alone.
 ProjectManager must combine:
 
 - Product requirements and user value from `docs/SDLC_PLAN.md`.
+- Spec-driven feature lifecycle output.
 - Feature refinement notes for the specific capability.
 - Architecture constraints and dependencies.
 - Existing implementation state from `docs/PROJECT_STATE.md`.
 - Board state and predecessor stories.
 
 If a feature lacks enough product detail for a human developer to implement safely, ProjectManager must create or update a refinement issue before creating implementation subtasks.
+
+## Markdown Task Requirement
+
+All GitHub issue bodies, role subtasks, PR descriptions, and evidence updates must use structured Markdown.
+
+Required parent story sections:
+
+- Product Context
+- User Story
+- Acceptance Criteria
+- Technical Notes
+- Required Role Subtasks
+- Definition of Done
+
+Required role subtask sections:
+
+- Parent Story
+- Role Responsibility
+- Inputs
+- Required Work
+- Output / Evidence
+- Status Updates
+- Done Checklist
 
 ## GitHub Access Contract
 

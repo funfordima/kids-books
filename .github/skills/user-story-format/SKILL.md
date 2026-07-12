@@ -17,6 +17,8 @@ Creates consistently structured stories for the DarkFactory agent system. Every 
 ## Required Inputs
 
 - Feature refinement brief from `feature-refinement`.
+- Spec-driven lifecycle report from `spec-driven-feature-lifecycle`.
+- Markdown section requirements from `markdown-task-format`.
 - Relevant `docs/SDLC_PLAN.md` section.
 - Current `docs/PROJECT_STATE.md`.
 - Relevant architecture/security/testing constraints.
@@ -28,10 +30,10 @@ Creates consistently structured stories for the DarkFactory agent system. Every 
 2. Read the relevant SDLC and project-state sections.
 3. Identify actor: parent user, subscriber, system worker, admin, or developer/operator.
 4. Define the product goal in plain language.
-5. Write product context: problem, expected behavior, primary flow, out of scope, and dependencies.
+5. Write product context in Markdown: problem, expected behavior, primary flow, out of scope, and dependencies.
 6. Write 4-8 Given/When/Then acceptance criteria, including at least one failure path.
 7. Add technical notes tied to the project stack.
-8. Add required role subtasks:
+8. Add required Markdown role subtasks:
    - Developer
    - Tester / QualityGate
    - CodeReviewer

@@ -1,5 +1,7 @@
 # User Story Template
 
+All parent stories and subtasks must be written in Markdown.
+
 **Title**: [Concise feature name, <=80 chars]  
 **Phase**: Phase N - [Phase Name]  
 **Priority**: P0 / P1 / P2  
