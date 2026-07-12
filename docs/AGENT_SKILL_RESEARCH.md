@@ -79,6 +79,17 @@ Adopted locally:
 - Add a durable `feature-status-dashboard` if GitHub Projects becomes insufficient.
 - Evaluate Spec Kit CLI after `development` contains the stable agent governance model.
 
+## GitHub Wiki Research
+
+GitHub Wiki is appropriate for durable project memory because GitHub documents it as a repository documentation area for long-form content such as project usage, design, and core principles. GitHub also supports editing wiki content locally through the separate `OWNER/REPO.wiki.git` repository once the first page exists.
+
+Adopted locally:
+
+- Added `WikiCurator` agent.
+- Added `github-wiki-knowledge-base` skill.
+- Added `docs/WIKI_KNOWLEDGE_BASE_SPEC.md`.
+- Wiki is for human-readable summaries and decisions; board/issues/PRs remain the source of truth for live workflow state.
+
 ## Source Links
 
 - https://github.com/github/spec-kit
@@ -87,3 +98,5 @@ Adopted locally:
 - https://github.com/Priivacy-ai/spec-kitty
 - https://github.com/mxyhi/ok-skills
 - https://github.com/agent-sh/agnix
+- https://docs.github.com/en/communities/documenting-your-project-with-wikis/about-wikis
+- https://docs.github.com/en/communities/documenting-your-project-with-wikis/adding-or-editing-wiki-pages

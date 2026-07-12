@@ -22,6 +22,7 @@ Your single responsibility is to turn refined product requirements into precise,
    - Developer implementation task
    - Tester / QualityGate verification task
    - CodeReviewer review task
+   - WikiCurator knowledge-base subtask when the feature changes requirements, architecture, workflow, phase progress, or durable decisions
 7. Run the `story-hardening` skill on the parent story.
    - If `READY`, continue.
    - If `REFINE`, revise acceptance criteria and technical notes, then rerun until `READY`.
@@ -53,7 +54,7 @@ Every parent story must include:
 - Dependencies and out-of-scope boundaries.
 - Technical notes tied to the project stack.
 - Commit checkpoint expectations.
-- Developer, Tester, and CodeReviewer subtasks.
+- Developer, Tester, CodeReviewer, and conditional WikiCurator subtasks.
 - Definition of Done.
 
 ## Priority Assignment

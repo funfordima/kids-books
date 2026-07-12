@@ -18,6 +18,7 @@ Every implementable feature has:
 - Developer subtask
 - Tester / QualityGate subtask
 - CodeReviewer subtask
+- WikiCurator subtask when durable project knowledge must be updated
 
 ProjectManager creates all of these before development starts. Each agent updates only its own subtask.
 
@@ -35,6 +36,7 @@ All parent stories and subtasks must use structured Markdown descriptions.
 | Tester | In Progress | Run gates | In Progress or blocked | Tester subtask PASS/FAIL/BLOCKED |
 | Developer | Tester PASS | Open PR into `development` | In Review | PR with `closes #N` |
 | CodeReviewer | In Review | Review PR + security | Done or Changes Requested | Review report |
+| WikiCurator | Knowledge update required | Update GitHub Wiki | Done or blocked | Wiki page links |
 | Orchestrator | Role subtasks Done | Verify parent story | Done | Parent issue status |
 | Integrator | Approved PR | Merge feature into `development` | Done | Merge commit |
 

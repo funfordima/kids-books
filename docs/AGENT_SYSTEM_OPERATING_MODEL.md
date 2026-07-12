@@ -12,7 +12,7 @@ This project must be implemented through the DarkFactory agent system. The goal 
 4. Every work item must be visible on the GitHub Project board before implementation starts.
 5. Every work item description must be structured Markdown.
 6. No single agent may create the story, implement it, test it, review it, and merge it.
-7. Every role updates its own assigned task or subtask on the board.
+7. Every role updates its own assigned subtask on the board.
 8. A story is not Done until quality gates pass and the CodeReviewer approves.
 
 ## Required Agent Roles
@@ -76,6 +76,17 @@ Owns integration after approval.
 - Merges feature branch into `development`.
 - Does not implement or review feature code.
 
+### WikiCurator
+
+Owns durable project knowledge in the GitHub Wiki.
+
+- Initializes and maintains the GitHub Wiki page map.
+- Summarizes requirements, decisions, rationale, architecture, and SDLC progress.
+- Links wiki summaries back to board issues, PRs, commits, and repository docs.
+- Updates only WikiCurator subtasks.
+- Does not implement product code.
+- Does not replace the GitHub Projects board as status source of truth.
+
 ## Board Item Structure
 
 Every implementable feature has:
@@ -84,6 +95,7 @@ Every implementable feature has:
 - One Developer subtask.
 - One Tester / QualityGate subtask.
 - One CodeReviewer subtask.
+- One WikiCurator subtask when the story changes requirements, architecture, governance, phase progress, or durable decisions.
 
 The parent story describes product value, functional behavior, acceptance criteria, dependencies, and Definition of Done. Subtasks describe role-specific work and evidence.
 
@@ -95,6 +107,20 @@ The parent story describes product value, functional behavior, acceptance criter
 - Tester moves its subtask to `In Progress` when gates start, then `Done` only when gates pass.
 - CodeReviewer moves its subtask to `In Review`, then `Done` or `Changes Requested`.
 - Parent story moves to `Done` only after Developer, Tester, and CodeReviewer subtasks are Done and the PR is merged or ready per the active phase rule.
+- If a WikiCurator subtask is required, parent story cannot move to `Done` until WikiCurator has updated or explicitly reported `NO_CHANGE`.
+
+## GitHub Wiki Requirement
+
+Use GitHub Wiki for durable human-readable project memory:
+
+- Requirements summaries.
+- Decision log and rationale.
+- Architecture summaries.
+- Agent workflow summaries.
+- SDLC progress summaries.
+- Setup and access notes.
+
+WikiCurator owns the wiki. See `docs/WIKI_KNOWLEDGE_BASE_SPEC.md` and `.github/skills/github-wiki-knowledge-base/SKILL.md`.
 
 ## Product Refinement Requirement
 

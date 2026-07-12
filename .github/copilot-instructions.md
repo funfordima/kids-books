@@ -58,7 +58,8 @@ Additional operating rules:
 - All story descriptions, subtask descriptions, PR descriptions, and role evidence updates must be structured Markdown.
 - Stories must include enough product context for a human developer who does not know the task.
 - Every parent story must have Developer, Tester / QualityGate, and CodeReviewer subtasks.
-- Each agent updates only its own assigned task.
+- Add a WikiCurator subtask when work changes requirements, architecture, governance, phase progress, or durable project decisions.
+- Each agent updates only its own assigned subtask.
 - No single agent may create the story, implement it, test it, review it, and merge it.
 
 ## Coding Conventions
