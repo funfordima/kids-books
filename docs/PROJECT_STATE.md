@@ -1,11 +1,11 @@
 # Project State Snapshot
 
-Last updated: 2026-07-09
+Last updated: 2026-07-12
 Scope: repository-wide status with implementation snapshot and completion logging protocol.
 
 ## 1. Current Result (What We Have)
 
-This repository currently contains project governance and an initialized frontend design-system foundation.
+This repository contains project governance, an initialized frontend design-system foundation, and the Step 1 monorepo application scaffold.
 
 Implemented artifacts:
 - SDLC governance plan in `docs/SDLC_PLAN.md`
@@ -13,6 +13,11 @@ Implemented artifacts:
 - Design token source files in `apps/frontend/src/design-system/tokens`
 - Seed generated token preview in `apps/frontend/src/design-system/generated/tokens.preview.css`
 - Content style guide in `apps/frontend/src/design-system/content-style-guide.md`
+- npm workspace configuration for `apps/backend`, `apps/frontend`, and `packages/shared`
+- Minimal strict-TypeScript NestJS backend with module/controller/service boundaries
+- Minimal strict-TypeScript Next.js 14 App Router frontend integrated around the existing design system
+- Consumable `@kids-books/shared` TypeScript package used by both applications
+- Root build, typecheck, test, and lint scripts plus minimal scaffold tests
 
 Token categories currently defined:
 - Colors
@@ -24,13 +29,13 @@ Token categories currently defined:
 
 ## 2. How It Works (Current Design-System Flow)
 
-Current flow is source-first with a seeded generated preview:
+The application scaffold and design-system flow now work as follows:
 
-1. Source-of-truth token JSON files live under `apps/frontend/src/design-system/tokens`.
-2. Generated artifacts are expected under `apps/frontend/src/design-system/generated`.
-3. For now, `tokens.preview.css` acts as bootstrap output for early usage and review.
-4. Content copy quality is governed by `content-style-guide.md`.
-5. Enforcement model is warning-first (as documented in the design-system README).
+1. Root npm workspaces coordinate the backend, frontend, and shared package.
+2. The shared package compiles to `packages/shared/dist` and exposes `SHARED_PACKAGE_VERSION`; both apps resolve it as a workspace dependency.
+3. The NestJS backend exposes a minimal root service response through standard module/controller/service boundaries.
+4. The Next.js App Router renders a minimal server-component landing page; the existing design-system subtree remains unchanged.
+5. Source-of-truth token JSON files remain under `apps/frontend/src/design-system/tokens`, with generated artifacts expected under `generated` and the seeded preview retained.
 
 ## 3. Architecture Baseline (Effective)
 
@@ -47,8 +52,7 @@ See `docs/SDLC_PLAN.md` (Requirements Override section) for canonical details.
 ## 4. What Is Not Implemented Yet
 
 Not yet present in this snapshot:
-- Backend app/module source implementation
-- Frontend product pages/features outside design-system seed
+- Product and domain functionality scheduled for Steps 2 and later
 - Token build pipeline automation (Style Dictionary or equivalent)
 - Automated warning-only governance checks wired into CI for token/content validation
 
@@ -66,10 +70,13 @@ Required update checklist:
 
 ## 6. Implementation Log
 
-### 2026-07-09 - Legacy dependency references removed from agent system docs/config
-- Removed Supabase MCP server from `.vscode/mcp.json` to avoid non-baseline MCP dependency/tool startup interactions.
-- Replaced legacy Supabase/Vercel/Railway guidance across `.github/agents`, `.github/instructions`, `.github/prompts`, and `.github/skills` with stack-aligned guidance (Prisma/PostgreSQL, Redis/BullMQ, Docker/Dokploy).
-- Verified repository scan returns zero matches for `supabase`, `@supabase/ssr`, `mcp-server-supabase`, `SUPABASE_ACCESS_TOKEN`, `railway`, and `vercel`.
+### 2026-07-12 - Step 1 monorepo bootstrap
+- Added npm workspace configuration for `apps/backend`, `apps/frontend`, and `packages/shared`, including root build, typecheck, test, and lint orchestration.
+- Added a minimal NestJS backend and Next.js 14 App Router frontend with strict TypeScript configurations.
+- Added the consumable `@kids-books/shared` package and referenced its exported version contract from both applications.
+- Added minimal co-located Vitest scaffold checks without introducing later-step product functionality.
+- Verification evidence: `git diff --exit-code -- apps/frontend/src/design-system` passed, confirming tracked design-system content is unchanged. Runtime build, typecheck, lint, and tests could not be executed because Node.js, npm, and TypeScript are not installed in the offline environment; dependencies were intentionally not downloaded or installed.
+
 
 ### 2026-07-09 - Initial project state snapshot documented
 - Captured current repository status and active architecture baseline.
