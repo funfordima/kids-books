@@ -1,6 +1,6 @@
 import { SHARED_PACKAGE_VERSION } from "@kids-books/shared";
 
-export default function HomePage(): JSX.Element {
+export default function HomePage() {
   return (
     <main>
       <h1>Kids Books</h1>

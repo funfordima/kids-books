@@ -11,6 +11,7 @@
     "build": "npm run build -w @kids-books/shared && npm run build -w @kids-books/backend && npm run build -w @kids-books/frontend",
     "typecheck": "npm run build -w @kids-books/shared && npm run typecheck -w @kids-books/backend && npm run typecheck -w @kids-books/frontend && npm run typecheck -w @kids-books/shared",
     "test": "npm run build -w @kids-books/shared && npm run test -w @kids-books/shared && npm run test -w @kids-books/backend && npm run test -w @kids-books/frontend",
+    "test:coverage": "npm run build -w @kids-books/shared && npm run test:coverage -w @kids-books/shared && npm run test:coverage -w @kids-books/backend && npm run test:coverage -w @kids-books/frontend",
     "lint": "npm run build -w @kids-books/shared && npm run lint -w @kids-books/shared && npm run lint -w @kids-books/backend && npm run lint -w @kids-books/frontend"
   },
   "engines": {
