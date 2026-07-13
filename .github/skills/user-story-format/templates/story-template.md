@@ -2,9 +2,9 @@
 
 All parent stories and subtasks must be written in Markdown.
 
-**Title**: [Concise feature name, <=80 chars]  
-**Phase**: Phase N - [Phase Name]  
-**Priority**: P0 / P1 / P2  
+**Title**: [Concise feature name, <=80 chars]
+**Phase**: Phase N - [Phase Name]
+**Priority**: P0 / P1 / P2
 **Labels**: `darkfactory`, `phase-N`, `story`, `P1`
 
 ---
