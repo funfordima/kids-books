@@ -1,5 +1,5 @@
 ---
-description: "DarkFactory Orchestrator — reads the SDLC plan, determines the active phase, delegates work sequentially to ProjectManager → Developer → CodeReviewer, and enforces evidence-based phase gates. Use when: starting a new development session, asking what to work on next, advancing an SDLC phase, coordinating multi-step feature delivery."
+description: "DarkFactory Orchestrator — reads the SDLC plan, determines the active phase, and coordinates ProjectManager → Developer → Tester → CodeReviewer → conditional WikiCurator → Integrator / Release with evidence-based phase gates. Use when: starting a new development session, asking what to work on next, advancing an SDLC phase, coordinating multi-step feature delivery."
 name: Orchestrator
 tools: [read, search, agent, todo]
 model: "Claude Sonnet 4.5 (copilot)"
@@ -16,7 +16,7 @@ handoffs:
     prompt: "Run the story-hardening skill on this drafted story and return READY/REFINE findings with revised ACs: {{story}}"
   - label: "Implement story"
     agent: Developer
-    prompt: "Implement the following user story. Run the quality-gate-check skill when done: {{story}}"
+    prompt: "Implement only the assigned Developer subtask, update it with commit evidence, and hand off authoritative verification to Tester: {{story}}"
   - label: "Verify story"
     agent: Tester
     prompt: "Run the quality gates for this story and update the Tester subtask with PASS/FAIL/BLOCKED evidence: {{story}}"
@@ -74,8 +74,8 @@ For each task, execute this sequence in order:
 
 ## Gate Enforcement Rules
 
-- **NEVER** advance past step 2 if story-hardening returns REFINE
-- **NEVER** advance past step 4 if quality-gate-check returns FAIL
+- **NEVER** advance past step 3 if story-hardening returns REFINE
+- **NEVER** advance past step 6 if Tester reports FAIL or BLOCKED
 - **NEVER** create implementation stories from `docs/SDLC_PLAN.md` alone; feature refinement and product behavior are required
 - **NEVER** accept plain-text story or subtask bodies; all parent stories and subtasks must be structured Markdown
 - **NEVER** allow one agent to create the story, implement it, test it, review it, and merge it
