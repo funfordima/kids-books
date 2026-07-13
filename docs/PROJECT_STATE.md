@@ -17,7 +17,7 @@ Implemented artifacts:
 - Minimal strict-TypeScript NestJS backend with module/controller/service boundaries
 - Minimal strict-TypeScript Next.js App Router frontend integrated around the existing design system
 - Consumable `@kids-books/shared` TypeScript package used by both applications
-- Root build, typecheck, lint, test, and V8 coverage scripts plus minimal scaffold tests
+- Root build, typecheck, lint, test, and V8 coverage scripts plus minimal scaffold tests; ESLint 9 flat configs analyze frontend, backend, and shared source/tests while TypeScript remains a separate gate
 - Root strict `tsconfig.json` that typechecks backend, frontend, shared source, and co-located tests through literal `npx tsc --noEmit`
 
 Token categories currently defined:
@@ -80,6 +80,7 @@ Required update checklist:
 - Updated to audit-remediated dependencies: Next.js 16.2.10 with React 19.2.4, NestJS 11.1.28, TypeScript 5.9.3, and Vitest 4.1.10. The App Router behavior is unchanged; the version update resolves the high-severity findings affecting the original Next.js 14 dependency while the Requirements Override remains version-agnostic.
 - Clarified stale legacy architecture/instruction text to use version-neutral Next.js App Router wording. Under the SDLC plan's explicit precedence rule, the Requirements Override supersedes the older Next.js 14 table entry; Next.js 16.2.10 is retained to avoid reintroducing high-severity production findings.
 - Added a repository-wide strict TypeScript project covering actual backend, frontend, shared, and test source so the mandatory literal `npx tsc --noEmit` gate performs meaningful work.
+- Replaced the backend/shared lint aliases to `tsc` with real typed ESLint 9 flat-config analysis of their source and co-located tests; root `npm run lint` now enforces ESLint in all three workspaces independently from typechecking.
 - Added `@nestjs/platform-express` so the backend start command is runnable and uses explicit Nest injection metadata for portable coverage results.
 - Developer verification used pinned `node:22.23.1-bookworm-slim`: clean `npm ci`, root build, typecheck, lint, unit tests, and coverage completed successfully; all three workspaces reported 100% line and branch coverage. Backend and frontend startup smoke requests both returned HTTP 200 and resolved `@kids-books/shared` version `0.1.0`.
 - Dependency audit result after remediation: zero high or critical findings in both production and complete graphs. npm reports two residual moderate findings for PostCSS 8.4.31 pinned by Next.js 16.2.10; forcing npm's suggested downgrade to Next.js 9.3.3 is incompatible with the App Router and is not accepted. Independent Tester evidence remains required before merge.

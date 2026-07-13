@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "lint": "tsc -p tsconfig.json --noEmit"
+    "lint": "eslint src --max-warnings=0"
   },
   "dependencies": {
     "@kids-books/shared": "0.1.0",

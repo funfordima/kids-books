@@ -19,7 +19,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "lint": "tsc -p tsconfig.json --noEmit"
+    "lint": "eslint src --max-warnings=0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.1.10",
