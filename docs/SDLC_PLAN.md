@@ -168,7 +168,7 @@ Wonderbly's top complaints: "barely personalized", too expensive, physical deliv
 
 | Layer | Choice | Notes |
 |-------|--------|-------|
-| Frontend | Next.js 14 (App Router) + TypeScript | UI and web reader |
+| Frontend | Next.js (App Router) + TypeScript | UI and web reader; version follows the Requirements Override and supported security baseline |
 | Backend API | NestJS + TypeScript | Domain logic, auth, API contracts |
 | Story AI | OpenAI GPT-4o | Structured JSON output per page |
 | Illustration AI | OpenAI DALL-E 3 | Per page, async via queue |

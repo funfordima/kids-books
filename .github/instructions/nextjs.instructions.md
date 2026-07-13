@@ -1,10 +1,10 @@
 ---
-name: "Next.js 14 App Router Standards"
-description: "Next.js 14 App Router coding standards for this project. Applied to all TypeScript/TSX source files."
+name: "Next.js App Router Standards"
+description: "Version-neutral Next.js App Router coding standards for this project. Applied to all TypeScript/TSX source files."
 applyTo: "**/*.{ts,tsx}"
 ---
 
-# Next.js 14 App Router Standards
+# Next.js App Router Standards
 
 ## Component Model
 - **Default to Server Components** — do NOT add `"use client"` unless the component uses browser APIs (`window`, `document`, `localStorage`), React hooks (`useState`, `useEffect`, `useRef`), or event handlers

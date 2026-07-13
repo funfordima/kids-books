@@ -1,11 +1,11 @@
 # Project State Snapshot
 
-Last updated: 2026-07-09
+Last updated: 2026-07-13
 Scope: repository-wide status with implementation snapshot and completion logging protocol.
 
 ## 1. Current Result (What We Have)
 
-This repository currently contains project governance and an initialized frontend design-system foundation.
+This repository contains project governance, an initialized frontend design-system foundation, and the Step 1 monorepo application scaffold.
 
 Implemented artifacts:
 - SDLC governance plan in `docs/SDLC_PLAN.md`
@@ -13,6 +13,12 @@ Implemented artifacts:
 - Design token source files in `apps/frontend/src/design-system/tokens`
 - Seed generated token preview in `apps/frontend/src/design-system/generated/tokens.preview.css`
 - Content style guide in `apps/frontend/src/design-system/content-style-guide.md`
+- npm workspace configuration for `apps/backend`, `apps/frontend`, and `packages/shared`
+- Minimal strict-TypeScript NestJS backend with module/controller/service boundaries
+- Minimal strict-TypeScript Next.js App Router frontend integrated around the existing design system
+- Consumable `@kids-books/shared` TypeScript package used by both applications
+- Root build, typecheck, lint, test, and V8 coverage scripts plus minimal scaffold tests; ESLint 9 flat configs analyze frontend, backend, and shared source/tests while TypeScript remains a separate gate
+- Root strict `tsconfig.json` that typechecks backend, frontend, shared source, and co-located tests through literal `npx tsc --noEmit`
 
 Token categories currently defined:
 - Colors
@@ -24,13 +30,13 @@ Token categories currently defined:
 
 ## 2. How It Works (Current Design-System Flow)
 
-Current flow is source-first with a seeded generated preview:
+The application scaffold and design-system flow now work as follows:
 
-1. Source-of-truth token JSON files live under `apps/frontend/src/design-system/tokens`.
-2. Generated artifacts are expected under `apps/frontend/src/design-system/generated`.
-3. For now, `tokens.preview.css` acts as bootstrap output for early usage and review.
-4. Content copy quality is governed by `content-style-guide.md`.
-5. Enforcement model is warning-first (as documented in the design-system README).
+1. Root npm workspaces coordinate the backend, frontend, and shared package.
+2. The shared package compiles to `packages/shared/dist` and exposes `SHARED_PACKAGE_VERSION`; both apps resolve it as a workspace dependency.
+3. The NestJS backend exposes a minimal root service response through standard module/controller/service boundaries.
+4. The Next.js App Router renders a minimal server-component landing page; the existing design-system subtree remains unchanged.
+5. Source-of-truth token JSON files remain under `apps/frontend/src/design-system/tokens`, with generated artifacts expected under `generated` and the seeded preview retained.
 
 ## 3. Architecture Baseline (Effective)
 
@@ -47,8 +53,7 @@ See `docs/SDLC_PLAN.md` (Requirements Override section) for canonical details.
 ## 4. What Is Not Implemented Yet
 
 Not yet present in this snapshot:
-- Backend app/module source implementation
-- Frontend product pages/features outside design-system seed
+- Product and domain functionality scheduled for Steps 2 and later
 - Token build pipeline automation (Style Dictionary or equivalent)
 - Automated warning-only governance checks wired into CI for token/content validation
 
@@ -66,10 +71,20 @@ Required update checklist:
 
 ## 6. Implementation Log
 
-### 2026-07-09 - Legacy dependency references removed from agent system docs/config
-- Removed Supabase MCP server from `.vscode/mcp.json` to avoid non-baseline MCP dependency/tool startup interactions.
-- Replaced legacy Supabase/Vercel/Railway guidance across `.github/agents`, `.github/instructions`, `.github/prompts`, and `.github/skills` with stack-aligned guidance (Prisma/PostgreSQL, Redis/BullMQ, Docker/Dokploy).
-- Verified repository scan returns zero matches for `supabase`, `@supabase/ssr`, `mcp-server-supabase`, `SUPABASE_ACCESS_TOKEN`, `railway`, and `vercel`.
+### 2026-07-12 - Step 1 monorepo bootstrap
+- Added npm workspace configuration for `apps/backend`, `apps/frontend`, and `packages/shared`, including root build, typecheck, test, and lint orchestration.
+- Added a minimal NestJS backend and Next.js App Router frontend with strict TypeScript configurations.
+- Added the consumable `@kids-books/shared` package and referenced its exported version contract from both applications.
+- Added co-located Vitest checks and V8 coverage configuration with 65% line and branch thresholds without introducing later-step product functionality.
+- Reconciled the scaffold with the governance baseline from PR #18 and preserved the existing design-system subtree without changes.
+- Updated to audit-remediated dependencies: Next.js 16.2.10 with React 19.2.4, NestJS 11.1.28, TypeScript 5.9.3, and Vitest 4.1.10. The App Router behavior is unchanged; the version update resolves the high-severity findings affecting the original Next.js 14 dependency while the Requirements Override remains version-agnostic.
+- Clarified stale legacy architecture/instruction text to use version-neutral Next.js App Router wording. Under the SDLC plan's explicit precedence rule, the Requirements Override supersedes the older Next.js 14 table entry; Next.js 16.2.10 is retained to avoid reintroducing high-severity production findings.
+- Added a repository-wide strict TypeScript project covering actual backend, frontend, shared, and test source so the mandatory literal `npx tsc --noEmit` gate performs meaningful work.
+- Replaced the backend/shared lint aliases to `tsc` with real typed ESLint 9 flat-config analysis of their source and co-located tests; root `npm run lint` now enforces ESLint in all three workspaces independently from typechecking.
+- Added `@nestjs/platform-express` so the backend start command is runnable and uses explicit Nest injection metadata for portable coverage results.
+- Developer verification used pinned `node:22.23.1-bookworm-slim`: clean `npm ci`, root build, typecheck, lint, unit tests, and coverage completed successfully; all three workspaces reported 100% line and branch coverage. Backend and frontend startup smoke requests both returned HTTP 200 and resolved `@kids-books/shared` version `0.1.0`.
+- Dependency audit result after remediation: zero high or critical findings in both production and complete graphs. npm reports two residual moderate findings for PostCSS 8.4.31 pinned by Next.js 16.2.10; forcing npm's suggested downgrade to Next.js 9.3.3 is incompatible with the App Router and is not accepted. Independent Tester evidence remains required before merge.
+
 
 ### 2026-07-09 - Initial project state snapshot documented
 - Captured current repository status and active architecture baseline.
