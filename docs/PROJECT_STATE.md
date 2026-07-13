@@ -1,6 +1,6 @@
 # Project State Snapshot
 
-Last updated: 2026-07-12
+Last updated: 2026-07-13
 Scope: repository-wide status with implementation snapshot and completion logging protocol.
 
 ## 1. Current Result (What We Have)
@@ -15,9 +15,9 @@ Implemented artifacts:
 - Content style guide in `apps/frontend/src/design-system/content-style-guide.md`
 - npm workspace configuration for `apps/backend`, `apps/frontend`, and `packages/shared`
 - Minimal strict-TypeScript NestJS backend with module/controller/service boundaries
-- Minimal strict-TypeScript Next.js 14 App Router frontend integrated around the existing design system
+- Minimal strict-TypeScript Next.js App Router frontend integrated around the existing design system
 - Consumable `@kids-books/shared` TypeScript package used by both applications
-- Root build, typecheck, test, and lint scripts plus minimal scaffold tests
+- Root build, typecheck, lint, test, and V8 coverage scripts plus minimal scaffold tests
 
 Token categories currently defined:
 - Colors
@@ -72,10 +72,14 @@ Required update checklist:
 
 ### 2026-07-12 - Step 1 monorepo bootstrap
 - Added npm workspace configuration for `apps/backend`, `apps/frontend`, and `packages/shared`, including root build, typecheck, test, and lint orchestration.
-- Added a minimal NestJS backend and Next.js 14 App Router frontend with strict TypeScript configurations.
+- Added a minimal NestJS backend and Next.js App Router frontend with strict TypeScript configurations.
 - Added the consumable `@kids-books/shared` package and referenced its exported version contract from both applications.
-- Added minimal co-located Vitest scaffold checks without introducing later-step product functionality.
-- Verification evidence: `git diff --exit-code -- apps/frontend/src/design-system` passed, confirming tracked design-system content is unchanged. `npm install` completed with a generated lockfile using a portable Node.js 20 runtime; npm reported dependency audit findings (3 low, 12 moderate, 8 high, 1 critical) from the initial scaffold dependency graph. Build, typecheck, lint, and test gates could not be completed because the portable `node.exe` began hanging even for `node -v` after dependency installation in this local environment.
+- Added co-located Vitest checks and V8 coverage configuration with 65% line and branch thresholds without introducing later-step product functionality.
+- Reconciled the scaffold with the governance baseline from PR #18 and preserved the existing design-system subtree without changes.
+- Updated to audit-remediated dependencies: Next.js 16.2.10 with React 19.2.4, NestJS 11.1.28, TypeScript 5.9.3, and Vitest 4.1.10. The App Router behavior is unchanged; the version update resolves the high-severity findings affecting the original Next.js 14 dependency while the Requirements Override remains version-agnostic.
+- Added `@nestjs/platform-express` so the backend start command is runnable and uses explicit Nest injection metadata for portable coverage results.
+- Developer verification used pinned `node:22.23.1-bookworm-slim`: clean `npm ci`, root build, typecheck, lint, unit tests, and coverage completed successfully; all three workspaces reported 100% line and branch coverage. Backend and frontend startup smoke requests both returned HTTP 200 and resolved `@kids-books/shared` version `0.1.0`.
+- Dependency audit result after remediation: zero high or critical findings in both production and complete graphs. npm reports two residual moderate findings for PostCSS 8.4.31 pinned by Next.js 16.2.10; forcing npm's suggested downgrade to Next.js 9.3.3 is incompatible with the App Router and is not accepted. Independent Tester evidence remains required before merge.
 
 
 ### 2026-07-09 - Initial project state snapshot documented
