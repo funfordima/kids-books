@@ -48,6 +48,20 @@ This project uses a **DarkFactory multi-agent SDLC pipeline**. All agents operat
 7. **Non-destructive** — commit to git at every gate checkpoint; never rewrite history
 8. **Board automation** — GitHub Actions auto-links PRs to issues, auto-closes issues on merge, auto-adds commit comments
 
+Additional operating rules:
+
+- Follow `docs/AGENT_SYSTEM_OPERATING_MODEL.md`.
+- Use non-interactive GitHub access for routine agent work; see `.github/AGENT_GITHUB_ACCESS.md`.
+- Do not rely on browser/device OAuth inside agent workflows.
+- ProjectManager must run feature refinement before creating implementation stories.
+- ProjectManager must use `spec-driven-feature-lifecycle` before creating implementation stories.
+- All story descriptions, subtask descriptions, PR descriptions, and role evidence updates must be structured Markdown.
+- Stories must include enough product context for a human developer who does not know the task.
+- Every parent story must have Developer, Tester / QualityGate, and CodeReviewer subtasks.
+- Add a WikiCurator subtask when work changes requirements, architecture, governance, phase progress, or durable project decisions.
+- Each agent updates only its own assigned subtask.
+- No single agent may create the story, implement it, test it, review it, and merge it.
+
 ## Coding Conventions
 
 ### Execution Rules
