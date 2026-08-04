@@ -1,11 +1,11 @@
 # Project State Snapshot
 
-Last updated: 2026-07-13
+Last updated: 2026-08-03
 Scope: repository-wide status with implementation snapshot and completion logging protocol.
 
 ## 1. Current Result (What We Have)
 
-This repository contains project governance, an initialized frontend design-system foundation, and the Step 1 monorepo application scaffold.
+This repository contains project governance, an initialized frontend design-system foundation, the Step 1 monorepo application scaffold, and the Step 2 local service configuration.
 
 Implemented artifacts:
 - SDLC governance plan in `docs/SDLC_PLAN.md`
@@ -19,6 +19,9 @@ Implemented artifacts:
 - Consumable `@kids-books/shared` TypeScript package used by both applications
 - Root build, typecheck, lint, test, and V8 coverage scripts plus minimal scaffold tests; ESLint 9 flat configs analyze frontend, backend, and shared source/tests while TypeScript remains a separate gate
 - Root strict `tsconfig.json` that typechecks backend, frontend, shared source, and co-located tests through literal `npx tsc --noEmit`
+- Docker Compose configuration for local PostgreSQL, Redis, and MinIO under `infra/docker`
+- Pinned service images, health checks, loopback-only default port bindings, and named persistent volumes
+- A safe local environment example plus documented validation, startup, smoke-check, persistence, diagnostics, and destructive-reset workflows
 
 Token categories currently defined:
 - Colors
@@ -28,7 +31,7 @@ Token categories currently defined:
 - Shadow
 - Motion
 
-## 2. How It Works (Current Design-System Flow)
+## 2. How It Works (Current System Flow)
 
 The application scaffold and design-system flow now work as follows:
 
@@ -37,6 +40,9 @@ The application scaffold and design-system flow now work as follows:
 3. The NestJS backend exposes a minimal root service response through standard module/controller/service boundaries.
 4. The Next.js App Router renders a minimal server-component landing page; the existing design-system subtree remains unchanged.
 5. Source-of-truth token JSON files remain under `apps/frontend/src/design-system/tokens`, with generated artifacts expected under `generated` and the seeded preview retained.
+6. Developers copy `infra/docker/.env.example` to the ignored `infra/docker/.env`, validate `infra/docker/compose.yaml`, and start PostgreSQL, Redis, and MinIO with Docker Compose.
+7. Compose waits on service-specific health checks and exposes configurable PostgreSQL, Redis, MinIO API, and MinIO console ports on `127.0.0.1` by default.
+8. PostgreSQL rows, Redis append-only data, and MinIO objects persist in named volumes across normal stop/start or container recreation; volume deletion remains a separate, explicitly destructive operation.
 
 ## 3. Architecture Baseline (Effective)
 
@@ -53,7 +59,7 @@ See `docs/SDLC_PLAN.md` (Requirements Override section) for canonical details.
 ## 4. What Is Not Implemented Yet
 
 Not yet present in this snapshot:
-- Product and domain functionality scheduled for Steps 2 and later
+- Product and domain functionality scheduled for Steps 3 and later
 - Token build pipeline automation (Style Dictionary or equivalent)
 - Automated warning-only governance checks wired into CI for token/content validation
 
@@ -70,6 +76,16 @@ Required update checklist:
 6. Add links to evidence (tests, typecheck, docs, or gates) when available.
 
 ## 6. Implementation Log
+
+### 2026-08-03 - Step 2 local PostgreSQL, Redis, and MinIO infrastructure
+- Added `infra/docker/compose.yaml` with exactly PostgreSQL, Redis, and MinIO using explicit image versions, health checks, loopback-only configurable host ports, authentication-aware local settings, and separate named volumes.
+- Added `infra/docker/.env.example`; active `.env` files remain ignored and the committed values are clearly marked for local development only.
+- Added `infra/docker/README.md` with exact configuration validation, healthy startup, service smoke checks, normal lifecycle, persistence, diagnostics, and warned destructive reset commands.
+- Developer-side checks rendered the Compose model successfully with the example environment, confirmed the exact three services/images, and confirmed missing required configuration exits unsuccessfully. The implementation and dependency-disposition baseline is candidate `a53937d4d1080b61b312a7d005dd7ed1e6a5d397`.
+- In response to the initial audit result, updated Next.js and its matching ESLint config from 16.2.10 to the registry-latest 16.2.12, and regenerated the lockfile with safe non-force remediation of the dev-only `brace-expansion` paths from 1.1.16 and 5.0.7 to 1.1.18 and 5.0.9.
+- The independent Tester reported [PASS for exact candidate `a53937d4d1080b61b312a7d005dd7ed1e6a5d397`](https://github.com/funfordima/kids-books/issues/27#issuecomment-5170762611) under revised AC-8: Docker/runtime and root build, typecheck, lint, test, and coverage gates passed; full and production audits reproduced the inherited three-high, zero-critical baseline without a new high/critical finding.
+- The three inherited findings through Next.js 16.2.12, PostCSS 8.4.31, and Sharp 0.34.5 remain unresolved and are explicitly deferred to [upstream remediation tracker #70](https://github.com/funfordima/kids-books/issues/70). This disposition permits Step 2 completion under revised AC-8; it does not claim remediation, accept the risk for production, or establish production deployment safety. Re-evaluation remains mandatory before Phase 5 deployment/go-live.
+- [PR #71](https://github.com/funfordima/kids-books/pull/71) is open for Step 2. CodeReviewer requested this durable-record correction; independent re-review is required after the documentation-only follow-up commit.
 
 ### 2026-07-12 - Step 1 monorepo bootstrap
 - Added npm workspace configuration for `apps/backend`, `apps/frontend`, and `packages/shared`, including root build, typecheck, test, and lint orchestration.
