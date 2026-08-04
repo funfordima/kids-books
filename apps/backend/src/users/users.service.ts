@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { AuthenticatedParentContext } from "../auth/authenticated-parent";
+import { createDeferredImplementationError } from "../common/not-implemented";
 import type {
   CurrentUserProfile,
   UsersModuleStatus
@@ -17,10 +18,7 @@ export class UsersService {
   }
 
   public getCurrentUser(parent: AuthenticatedParentContext): CurrentUserProfile {
-    return {
-      id: parent.parentId,
-      email: parent.email,
-      role: parent.role
-    };
+    void parent;
+    return createDeferredImplementationError("User profile lookup");
   }
 }

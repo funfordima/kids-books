@@ -9,3 +9,9 @@ export interface AuthenticatedParentContext {
 export interface AuthenticatedRequest {
   readonly parent?: AuthenticatedParentContext;
 }
+
+export interface AuthSessionContext {
+  readonly sessionId: string;
+  readonly parent: AuthenticatedParentContext;
+  readonly provider: "google";
+}
