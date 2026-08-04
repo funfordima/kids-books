@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
+import type { AuthenticatedParentContext } from "../auth/authenticated-parent";
+import { createDeferredImplementationError } from "../common/not-implemented";
 import type {
+  BookAgeGroup,
+  BookLength,
   BookSummary,
   BooksModuleStatus,
   CreateBookRequest
@@ -7,18 +11,6 @@ import type {
 
 @Injectable()
 export class BooksService {
-  private readonly previewBook: BookSummary = {
-    id: "book-local-preview",
-    status: "draft",
-    title: "Preview Book Foundation",
-    config: {
-      childName: "Reader",
-      ageGroup: "5-6",
-      storyType: "educational",
-      pageCount: 8
-    }
-  };
-
   public getStatus(): BooksModuleStatus {
     return {
       resource: "books",
@@ -28,20 +20,54 @@ export class BooksService {
     };
   }
 
-  public listBooks(): readonly BookSummary[] {
-    return [this.previewBook];
+  public listBooks(_parent: AuthenticatedParentContext): readonly BookSummary[] {
+    void _parent;
+    return createDeferredImplementationError("Book listing");
   }
 
-  public getBook(bookId: string): BookSummary | undefined {
-    return bookId === this.previewBook.id ? this.previewBook : undefined;
+  public getBook(
+    _parent: AuthenticatedParentContext,
+    _bookId: string
+  ): BookSummary {
+    void _parent;
+    void _bookId;
+    return createDeferredImplementationError("Book lookup");
   }
 
-  public createBook(request: CreateBookRequest): BookSummary {
-    return {
-      id: "book-pending-foundation",
-      status: "pending",
-      title: `A story for ${request.childName}`,
-      config: request
-    };
+  public createBook(
+    parent: AuthenticatedParentContext,
+    request: unknown
+  ): BookSummary {
+    this.validateCreateBookRequest(request);
+    return createDeferredImplementationError(
+      `Book creation for parent ${parent.parentId}`
+    );
+  }
+
+  public validateCreateBookRequest(request: unknown): CreateBookRequest {
+    if (!this.isCreateBookRequest(request)) {
+      throw new BadRequestException("Invalid book creation request.");
+    }
+
+    return request;
+  }
+
+  private isCreateBookRequest(request: unknown): request is CreateBookRequest {
+    if (!request || typeof request !== "object") {
+      return false;
+    }
+
+    const candidate = request as Partial<CreateBookRequest>;
+    const validAgeGroups: readonly BookAgeGroup[] = ["3-4", "5-6", "7-9"];
+    const validPageCounts: readonly BookLength[] = [8, 12, 16];
+
+    return (
+      typeof candidate.childName === "string" &&
+      candidate.childName.trim().length > 0 &&
+      typeof candidate.storyType === "string" &&
+      candidate.storyType.trim().length > 0 &&
+      validAgeGroups.includes(candidate.ageGroup as BookAgeGroup) &&
+      validPageCounts.includes(candidate.pageCount as BookLength)
+    );
   }
 }

@@ -1,4 +1,7 @@
-import { Controller, Get, Inject, Param } from "@nestjs/common";
+import { Controller, Get, Inject, Param, Req, UseGuards } from "@nestjs/common";
+import type { AuthenticatedRequest } from "../auth/authenticated-parent";
+import { AuthenticatedParentGuard } from "../auth/authenticated-parent.guard";
+import { validateNonEmptyIdentifier } from "../common/validation";
 import type {
   TemplatesModuleStatus,
   TemplateSummary
@@ -17,15 +20,31 @@ export class TemplatesController {
     return this.templatesService.getStatus();
   }
 
+  @UseGuards(AuthenticatedParentGuard)
   @Get()
-  public listTemplates(): readonly TemplateSummary[] {
-    return this.templatesService.listTemplates();
+  public listTemplates(
+    @Req() request: AuthenticatedRequest
+  ): readonly TemplateSummary[] {
+    if (!request.parent) {
+      throw new Error("Authenticated parent context missing after guard.");
+    }
+
+    return this.templatesService.listTemplates(request.parent);
   }
 
+  @UseGuards(AuthenticatedParentGuard)
   @Get(":templateId")
   public getTemplate(
+    @Req() request: AuthenticatedRequest,
     @Param("templateId") templateId: string
-  ): TemplateSummary | undefined {
-    return this.templatesService.getTemplate(templateId);
+  ): TemplateSummary {
+    if (!request.parent) {
+      throw new Error("Authenticated parent context missing after guard.");
+    }
+
+    return this.templatesService.getTemplate(
+      request.parent,
+      validateNonEmptyIdentifier(templateId, "templateId")
+    );
   }
 }

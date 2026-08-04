@@ -1,4 +1,7 @@
-import { Controller, Get, Inject, Param } from "@nestjs/common";
+import { Controller, Get, Inject, Param, Req, UseGuards } from "@nestjs/common";
+import type { AuthenticatedRequest } from "../auth/authenticated-parent";
+import { AuthenticatedParentGuard } from "../auth/authenticated-parent.guard";
+import { validateNonEmptyIdentifier } from "../common/validation";
 import type {
   GenerationJobStatus,
   JobsModuleStatus
@@ -16,10 +19,19 @@ export class JobsController {
     return this.jobsService.getStatus();
   }
 
+  @UseGuards(AuthenticatedParentGuard)
   @Get(":jobId")
   public getJobStatus(
+    @Req() request: AuthenticatedRequest,
     @Param("jobId") jobId: string
   ): GenerationJobStatus {
-    return this.jobsService.getJobStatus(jobId);
+    if (!request.parent) {
+      throw new Error("Authenticated parent context missing after guard.");
+    }
+
+    return this.jobsService.getJobStatus(
+      request.parent,
+      validateNonEmptyIdentifier(jobId, "jobId")
+    );
   }
 }

@@ -1,4 +1,6 @@
-import { Controller, Get, Inject } from "@nestjs/common";
+import { Controller, Get, Inject, Req, UseGuards } from "@nestjs/common";
+import type { AuthenticatedRequest } from "../auth/authenticated-parent";
+import { AuthenticatedParentGuard } from "../auth/authenticated-parent.guard";
 import type {
   CurrentUserProfile,
   UsersModuleStatus
@@ -16,8 +18,13 @@ export class UsersController {
     return this.usersService.getStatus();
   }
 
+  @UseGuards(AuthenticatedParentGuard)
   @Get("me")
-  public getCurrentUser(): CurrentUserProfile {
-    return this.usersService.getCurrentUser();
+  public getCurrentUser(@Req() request: AuthenticatedRequest): CurrentUserProfile {
+    if (!request.parent) {
+      throw new Error("Authenticated parent context missing after guard.");
+    }
+
+    return this.usersService.getCurrentUser(request.parent);
   }
 }

@@ -1,4 +1,6 @@
 import { Injectable } from "@nestjs/common";
+import type { AuthenticatedParentContext } from "../auth/authenticated-parent";
+import { createDeferredImplementationError } from "../common/not-implemented";
 import type {
   GenerationJobStatus,
   JobsModuleStatus
@@ -15,13 +17,12 @@ export class JobsService {
     };
   }
 
-  public getJobStatus(jobId: string): GenerationJobStatus {
-    return {
-      id: jobId,
-      kind: "book-generation",
-      status: "queued",
-      attemptsMade: 0,
-      maxAttempts: 3
-    };
+  public getJobStatus(
+    _parent: AuthenticatedParentContext,
+    _jobId: string
+  ): GenerationJobStatus {
+    void _parent;
+    void _jobId;
+    return createDeferredImplementationError("Job status lookup");
   }
 }

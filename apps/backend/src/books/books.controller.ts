@@ -1,8 +1,19 @@
-import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Post,
+  Req,
+  UseGuards
+} from "@nestjs/common";
+import type { AuthenticatedRequest } from "../auth/authenticated-parent";
+import { AuthenticatedParentGuard } from "../auth/authenticated-parent.guard";
+import { validateNonEmptyIdentifier } from "../common/validation";
 import type {
   BookSummary,
   BooksModuleStatus,
-  CreateBookRequest
 } from "./books.interfaces";
 import { BooksService } from "./books.service";
 
@@ -17,18 +28,42 @@ export class BooksController {
     return this.booksService.getStatus();
   }
 
+  @UseGuards(AuthenticatedParentGuard)
   @Get()
-  public listBooks(): readonly BookSummary[] {
-    return this.booksService.listBooks();
+  public listBooks(@Req() request: AuthenticatedRequest): readonly BookSummary[] {
+    if (!request.parent) {
+      throw new Error("Authenticated parent context missing after guard.");
+    }
+
+    return this.booksService.listBooks(request.parent);
   }
 
+  @UseGuards(AuthenticatedParentGuard)
   @Get(":bookId")
-  public getBook(@Param("bookId") bookId: string): BookSummary | undefined {
-    return this.booksService.getBook(bookId);
+  public getBook(
+    @Req() request: AuthenticatedRequest,
+    @Param("bookId") bookId: string
+  ): BookSummary {
+    if (!request.parent) {
+      throw new Error("Authenticated parent context missing after guard.");
+    }
+
+    return this.booksService.getBook(
+      request.parent,
+      validateNonEmptyIdentifier(bookId, "bookId")
+    );
   }
 
+  @UseGuards(AuthenticatedParentGuard)
   @Post()
-  public createBook(@Body() request: CreateBookRequest): BookSummary {
-    return this.booksService.createBook(request);
+  public createBook(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: unknown
+  ): BookSummary {
+    if (!request.parent) {
+      throw new Error("Authenticated parent context missing after guard.");
+    }
+
+    return this.booksService.createBook(request.parent, body);
   }
 }

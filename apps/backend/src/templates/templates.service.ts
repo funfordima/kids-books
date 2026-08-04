@@ -1,4 +1,6 @@
 import { Injectable } from "@nestjs/common";
+import type { AuthenticatedParentContext } from "../auth/authenticated-parent";
+import { createDeferredImplementationError } from "../common/not-implemented";
 import type {
   TemplatesModuleStatus,
   TemplateSummary
@@ -6,16 +8,6 @@ import type {
 
 @Injectable()
 export class TemplatesService {
-  private readonly templates: readonly TemplateSummary[] = [
-    {
-      id: "template-science-spark",
-      title: "The Backyard Science Spark",
-      audience: "picture-book",
-      storyType: "educational",
-      educationalSubtype: "science-discovery"
-    }
-  ];
-
   public getStatus(): TemplatesModuleStatus {
     return {
       resource: "templates",
@@ -25,11 +17,19 @@ export class TemplatesService {
     };
   }
 
-  public listTemplates(): readonly TemplateSummary[] {
-    return this.templates;
+  public listTemplates(
+    _parent: AuthenticatedParentContext
+  ): readonly TemplateSummary[] {
+    void _parent;
+    return createDeferredImplementationError("Template listing");
   }
 
-  public getTemplate(templateId: string): TemplateSummary | undefined {
-    return this.templates.find((template) => template.id === templateId);
+  public getTemplate(
+    _parent: AuthenticatedParentContext,
+    _templateId: string
+  ): TemplateSummary {
+    void _parent;
+    void _templateId;
+    return createDeferredImplementationError("Template lookup");
   }
 }

@@ -4,7 +4,6 @@ export interface CurrentUserProfile {
   id: string;
   email: string;
   role: UserRole;
-  subscriptionStatus: "inactive" | "trialing" | "active" | "canceled";
 }
 
 export interface UsersModuleStatus {

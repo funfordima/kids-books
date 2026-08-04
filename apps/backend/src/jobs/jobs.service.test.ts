@@ -1,9 +1,16 @@
+import { ServiceUnavailableException } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
 import { JobsController } from "./jobs.controller";
 import { JobsModule } from "./jobs.module";
 import { JobsService } from "./jobs.service";
 
 describe("JobsService", () => {
+  const parent = {
+    parentId: "parent-123",
+    email: "parent@example.local",
+    role: "guardian" as const
+  };
+
   it("reports the planned jobs module contract", () => {
     const service = new JobsService();
 
@@ -20,19 +27,15 @@ describe("JobsService", () => {
     const controller = new JobsController(service);
 
     expect(controller.getStatus()).toEqual(service.getStatus());
-    expect(controller.getJobStatus("job-123")).toEqual(
-      service.getJobStatus("job-123")
+    expect(() => controller.getJobStatus({ parent }, "job-123")).toThrow(
+      ServiceUnavailableException
     );
     expect(JobsModule).toBeDefined();
   });
 
-  it("returns a queued job status contract", () => {
-    expect(new JobsService().getJobStatus("job-123")).toEqual({
-      id: "job-123",
-      kind: "book-generation",
-      status: "queued",
-      attemptsMade: 0,
-      maxAttempts: 3
-    });
+  it("returns explicit deferred errors instead of queued job data", () => {
+    expect(() => new JobsService().getJobStatus(parent, "job-123")).toThrow(
+      ServiceUnavailableException
+    );
   });
 });

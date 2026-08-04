@@ -4,6 +4,12 @@ import { UsersModule } from "./users.module";
 import { UsersService } from "./users.service";
 
 describe("UsersService", () => {
+  const parent = {
+    parentId: "parent-123",
+    email: "parent@example.local",
+    role: "guardian" as const
+  };
+
   it("reports the planned user module contract", () => {
     const service = new UsersService();
 
@@ -15,24 +21,22 @@ describe("UsersService", () => {
     });
   });
 
-  it("exposes the status through its controller", () => {
+  it("exposes public status and protected profile contracts through its controller", () => {
     const service = new UsersService();
+    const controller = new UsersController(service);
 
-    expect(new UsersController(service).getStatus()).toEqual(
-      service.getStatus()
-    );
-    expect(new UsersController(service).getCurrentUser()).toEqual(
-      service.getCurrentUser()
+    expect(controller.getStatus()).toEqual(service.getStatus());
+    expect(controller.getCurrentUser({ parent })).toEqual(
+      service.getCurrentUser(parent)
     );
     expect(UsersModule).toBeDefined();
   });
 
-  it("returns a local current-user profile contract", () => {
-    expect(new UsersService().getCurrentUser()).toEqual({
-      id: "local-parent-preview",
+  it("derives the current-user profile from authenticated context", () => {
+    expect(new UsersService().getCurrentUser(parent)).toEqual({
+      id: "parent-123",
       email: "parent@example.local",
-      role: "guardian",
-      subscriptionStatus: "inactive"
+      role: "guardian"
     });
   });
 });

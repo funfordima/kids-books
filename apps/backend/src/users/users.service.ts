@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { AuthenticatedParentContext } from "../auth/authenticated-parent";
 import type {
   CurrentUserProfile,
   UsersModuleStatus
@@ -15,12 +16,11 @@ export class UsersService {
     };
   }
 
-  public getCurrentUser(): CurrentUserProfile {
+  public getCurrentUser(parent: AuthenticatedParentContext): CurrentUserProfile {
     return {
-      id: "local-parent-preview",
-      email: "parent@example.local",
-      role: "guardian",
-      subscriptionStatus: "inactive"
+      id: parent.parentId,
+      email: parent.email,
+      role: parent.role
     };
   }
 }

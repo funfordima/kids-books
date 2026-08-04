@@ -12,7 +12,7 @@ export interface CreateBookRequest {
 
 export interface BookSummary {
   id: string;
-  status: "draft" | "pending";
+  status: "unavailable";
   title: string;
   config: CreateBookRequest;
 }
