@@ -1,6 +1,6 @@
 # Project State Snapshot
 
-Last updated: 2026-08-03
+Last updated: 2026-08-04
 Scope: repository-wide status with implementation snapshot and completion logging protocol.
 
 ## 1. Current Result (What We Have)
@@ -15,6 +15,8 @@ Implemented artifacts:
 - Content style guide in `apps/frontend/src/design-system/content-style-guide.md`
 - npm workspace configuration for `apps/backend`, `apps/frontend`, and `packages/shared`
 - Minimal strict-TypeScript NestJS backend with module/controller/service boundaries
+- Step 3 backend foundation modules for auth, users, books, templates, and jobs under `apps/backend/src`
+- Typed backend auth and domain boundary contracts for Google OAuth readiness/start/callback, replaceable OAuth config source, authenticated parent/session context, protected users/books/templates/jobs controllers, DTO/identifier validation, and explicit deferred-operation errors
 - Minimal strict-TypeScript Next.js App Router frontend integrated around the existing design system
 - Consumable `@kids-books/shared` TypeScript package used by both applications
 - Root build, typecheck, lint, test, and V8 coverage scripts plus minimal scaffold tests; ESLint 9 flat configs analyze frontend, backend, and shared source/tests while TypeScript remains a separate gate
@@ -38,11 +40,12 @@ The application scaffold and design-system flow now work as follows:
 1. Root npm workspaces coordinate the backend, frontend, and shared package.
 2. The shared package compiles to `packages/shared/dist` and exposes `SHARED_PACKAGE_VERSION`; both apps resolve it as a workspace dependency.
 3. The NestJS backend exposes a minimal root service response through standard module/controller/service boundaries.
-4. The Next.js App Router renders a minimal server-component landing page; the existing design-system subtree remains unchanged.
-5. Source-of-truth token JSON files remain under `apps/frontend/src/design-system/tokens`, with generated artifacts expected under `generated` and the seeded preview retained.
-6. Developers copy `infra/docker/.env.example` to the ignored `infra/docker/.env`, validate `infra/docker/compose.yaml`, and start PostgreSQL, Redis, and MinIO with Docker Compose.
-7. Compose waits on service-specific health checks and exposes configurable PostgreSQL, Redis, MinIO API, and MinIO console ports on `127.0.0.1` by default.
-8. PostgreSQL rows, Redis append-only data, and MinIO objects persist in named volumes across normal stop/start or container recreation; volume deletion remains a separate, explicitly destructive operation.
+4. The backend imports foundational auth, users, books, templates, and jobs modules. Auth exposes readiness/start/callback boundary contracts only, with a replaceable config source and typed authenticated parent/session context but no token exchange or provider call. Users, books, templates, and jobs expose protected controller boundaries that fail closed without an authenticated parent context and return explicit service-unavailable errors for later-step persistence/queue behavior; they do not fabricate product data or connect to Prisma, BullMQ, Google OAuth packages, Redis, PostgreSQL, or external providers.
+5. The Next.js App Router renders a minimal server-component landing page; the existing design-system subtree remains unchanged.
+6. Source-of-truth token JSON files remain under `apps/frontend/src/design-system/tokens`, with generated artifacts expected under `generated` and the seeded preview retained.
+7. Developers copy `infra/docker/.env.example` to the ignored `infra/docker/.env`, validate `infra/docker/compose.yaml`, and start PostgreSQL, Redis, and MinIO with Docker Compose.
+8. Compose waits on service-specific health checks and exposes configurable PostgreSQL, Redis, MinIO API, and MinIO console ports on `127.0.0.1` by default.
+9. PostgreSQL rows, Redis append-only data, and MinIO objects persist in named volumes across normal stop/start or container recreation; volume deletion remains a separate, explicitly destructive operation.
 
 ## 3. Architecture Baseline (Effective)
 
@@ -59,7 +62,10 @@ See `docs/SDLC_PLAN.md` (Requirements Override section) for canonical details.
 ## 4. What Is Not Implemented Yet
 
 Not yet present in this snapshot:
-- Product and domain functionality scheduled for Steps 3 and later
+- Functional product behavior scheduled for Steps 4 and later
+- Prisma schema, migrations, repositories, and database-backed user/book/template persistence
+- Real Google OAuth package integration, sessions/JWTs, token exchange, and provider callbacks
+- BullMQ queue implementation and Redis-backed job processing
 - Token build pipeline automation (Style Dictionary or equivalent)
 - Automated warning-only governance checks wired into CI for token/content validation
 
@@ -76,6 +82,12 @@ Required update checklist:
 6. Add links to evidence (tests, typecheck, docs, or gates) when available.
 
 ## 6. Implementation Log
+
+### 2026-08-04 - Step 3 backend foundation modules
+- Added NestJS module scaffolding for auth, users, books, templates, and jobs under `apps/backend/src`, and imported those modules into `AppModule`.
+- Added typed controllers, services, guard scaffolding, replaceable OAuth config readiness, authenticated-parent/session context, DTO/identifier validation, and explicit deferred-operation errors for Step 3 boundary contracts: Google OAuth readiness/start/callback, user profile lookup, book list/detail/create, template list/detail, and planned job status lookup.
+- Added focused Vitest unit coverage for module contracts, guard fail-closed behavior, validation, and explicit service-unavailable deferred operations while intentionally avoiding Prisma schema or migrations, BullMQ implementation, frontend changes, real Google OAuth packages, and network dependencies.
+- Developer verification attempted direct npm workspace commands, but this PowerShell environment does not expose `node`, `npm`, or `npx` on PATH despite existing `node_modules`. Equivalent local package checks passed through the Node REPL runtime: TypeScript no-emit for `apps/backend/tsconfig.json`, Vitest for 10 backend test files, and ESLint for 36 backend source/test files.
 
 ### 2026-08-03 - Step 2 local PostgreSQL, Redis, and MinIO infrastructure
 - Added `infra/docker/compose.yaml` with exactly PostgreSQL, Redis, and MinIO using explicit image versions, health checks, loopback-only configurable host ports, authentication-aware local settings, and separate named volumes.
