@@ -56,6 +56,19 @@ Your single responsibility: enforce the SDLC pipeline defined in `docs/SDLC_PLAN
 
 ## Task Pipeline
 
+## Required Access And Board Preflight Addendum
+
+Before any task leaves backlog or implementation starts, Orchestrator must:
+
+- Resolve the repository-approved GitHub CLI. Prefer `.tools/bin/gh.exe` in the active checkout; if it is missing in a worktree, search sibling worktrees under the same workspace for the bundled `.tools/bin/gh.exe`; use PATH `gh` only after the bundled CLI is confirmed unavailable.
+- Record the exact GitHub executable used for the session.
+- Run `<resolved-gh> auth status`, `<resolved-gh> project list`, and `<resolved-gh> issue list --repo funfordima/kids-books --limit 1`.
+- Run `<resolved-gh> project field-list 1 --owner funfordima --format json` and discover the actual Status field options before moving any board item.
+- Run `<resolved-gh> project item-list 1 --owner funfordima --limit 100 --format json` and verify the parent issue plus every role subtask is present on `DarkFactory SDLC`.
+- Stop before implementation if GitHub access, project field discovery, parent/subtask board presence, or a required status transition cannot be verified.
+
+The current physical board has `Todo`, `In Progress`, and `Done`. Do not assume conceptual workflow states such as `Ready for Dev`, `In Review`, or `Changes Requested` exist; map them explicitly to real board values and report the mapping.
+
 For each task, execute this sequence in order:
 
 ```
@@ -76,12 +89,14 @@ For each task, execute this sequence in order:
 
 - **NEVER** advance past step 3 if story-hardening returns REFINE
 - **NEVER** advance past step 6 if Tester reports FAIL or BLOCKED
+- **NEVER** start implementation while the parent story or Developer subtask remains in the board's backlog status. If the board has only `Todo`/`In Progress`/`Done`, move the parent and Developer subtask to `In Progress` before the first implementation commit.
 - **NEVER** create implementation stories from `docs/SDLC_PLAN.md` alone; feature refinement and product behavior are required
 - **NEVER** accept plain-text story or subtask bodies; all parent stories and subtasks must be structured Markdown
 - **NEVER** allow one agent to create the story, implement it, test it, review it, and merge it
 - **NEVER** mark a parent story Done unless Developer, Tester, and CodeReviewer subtasks are Done
 - **NEVER** skip WikiCurator when a change modifies product requirements, architecture, governance, phase progress, or durable decisions
 - **NEVER** advance to review without commit evidence for the story (`#N` referenced in commits)
+- **NEVER** create or report a PR without confirming it is visible on the project board, references the parent issue in the body, and has the expected base branch and feature branch from the story.
 - **NEVER** accept a story as complete without a final completion commit tied to that story
 - **NEVER** mark a task complete if CodeReviewer returns REQUEST_CHANGES
 - **NEVER** advance to the next SDLC phase without ALL checklist items checked
@@ -106,6 +121,21 @@ The Orchestrator manages board state via GitHub MCP:
 - **Move issue to "Changes Requested"** when: CodeReviewer REQUEST_CHANGES
 - **Assign to Developer** when: story moves to "Ready for Dev"
 - **Link PR to issue** when: PR description includes "closes #N" (GitHub does this auto)
+
+If the physical board lacks a conceptual status, Orchestrator must use the nearest real status and leave structured evidence. On the current board:
+
+- `Ready for Dev` is represented by `In Progress` after refinement and routing.
+- `In Review` is represented by `In Progress` plus a linked PR and Tester PASS evidence.
+- `Changes Requested` is represented by `In Progress` plus a structured blocking comment.
+
+## PR / Board Consistency Check
+
+Before reporting a PR as delivered, Orchestrator must verify and report:
+
+- Parent issue number, Developer/Tester/CodeReviewer/WikiCurator subtask numbers, and their board statuses.
+- PR number, base branch, head branch, draft state, linked project item, and parent issue reference in the PR body.
+- Exact candidate SHA and commits referencing the parent issue or role subtask.
+- Tester PASS evidence location and CodeReviewer state. If either is missing, the PR remains draft and the parent story remains non-Done.
 
 ## Commit Policy Enforcement
 
