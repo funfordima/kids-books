@@ -4,18 +4,27 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "prebuild": "npm run prisma:generate",
     "start": "node dist/main.js",
     "start:dev": "tsc -p tsconfig.build.json --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretypecheck": "npm run prisma:generate",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src --max-warnings=0"
+    "lint": "eslint src --max-warnings=0",
+    "prisma:generate": "prisma generate --config prisma.config.ts",
+    "prisma:format": "prisma format --config prisma.config.ts",
+    "prisma:validate": "prisma validate --config prisma.config.ts"
   },
   "dependencies": {
     "@kids-books/shared": "0.1.0",
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",
     "@nestjs/platform-express": "11.1.28",
+    "@prisma/adapter-pg": "7.9.1",
+    "@prisma/client": "7.9.1",
+    "pg": "8.23.0",
+    "prisma": "7.9.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"
   },

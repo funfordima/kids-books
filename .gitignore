@@ -9,3 +9,4 @@ coverage/
 npm-debug.log*
 .tmp/
 .tools/
+apps/backend/src/generated/prisma/

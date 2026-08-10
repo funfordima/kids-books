@@ -1,0 +1,319 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  GUARDIAN
+  ADMIN
+
+  @@map("user_role")
+}
+
+enum SubscriptionStatus {
+  INACTIVE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+
+  @@map("subscription_status")
+}
+
+enum BookStatus {
+  DRAFT
+  GENERATING
+  READY
+  FAILED
+  ARCHIVED
+
+  @@map("book_status")
+}
+
+enum TemplateVisibility {
+  PRIVATE
+  PUBLIC
+
+  @@map("template_visibility")
+}
+
+enum TemplatePublicationStatus {
+  DRAFT
+  CANDIDATE
+  ACCEPTED
+  REJECTED
+
+  @@map("template_publication_status")
+}
+
+enum CharacterKind {
+  PARENT
+  CHILD
+  FRIEND
+  PET
+  SIBLING
+  OTHER
+
+  @@map("character_kind")
+}
+
+enum PictureStatus {
+  PENDING
+  GENERATING
+  READY
+  FAILED
+
+  @@map("picture_status")
+}
+
+enum JobType {
+  BOOK_GENERATION
+  PICTURE_GENERATION
+  TEMPLATE_PUBLICATION
+  PDF_EXPORT
+
+  @@map("job_type")
+}
+
+enum JobStatus {
+  QUEUED
+  ACTIVE
+  COMPLETED
+  FAILED
+  CANCELED
+  EXPIRED
+
+  @@map("job_status")
+}
+
+enum RatingValue {
+  THUMBS_UP
+  THUMBS_DOWN
+
+  @@map("rating_value")
+}
+
+model User {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email              String             @unique
+  displayName        String?            @map("display_name")
+  googleSubject      String?            @unique @map("google_subject")
+  role               UserRole           @default(GUARDIAN)
+  stripeCustomerId   String?            @unique @map("stripe_customer_id")
+  subscriptionStatus SubscriptionStatus @default(INACTIVE) @map("subscription_status")
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  books           Book[]
+  characters      Character[]
+  jobs            Job[]
+  ratings         Rating[]
+  referralProgram ReferralProgram?
+  referredByLinks ReferralProgram[] @relation("ReferralRecipient")
+  subscriptions   Subscription[]
+  templates       Template[]
+
+  @@map("users")
+}
+
+model Subscription {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String             @map("user_id") @db.Uuid
+  stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
+  plan                 String
+  status               SubscriptionStatus
+  currentPeriodEnd     DateTime?          @map("current_period_end") @db.Timestamptz(6)
+  trialEndsAt          DateTime?          @map("trial_ends_at") @db.Timestamptz(6)
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model Template {
+  id                    String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerUserId           String?                   @map("owner_user_id") @db.Uuid
+  sourceBookId          String?                   @unique @map("source_book_id") @db.Uuid
+  title                 String
+  description           String
+  storyType             String                    @map("story_type")
+  educationalSubtype    String?                   @map("educational_subtype")
+  ageMin                Int                       @map("age_min")
+  ageMax                Int                       @map("age_max")
+  visibility            TemplateVisibility        @default(PRIVATE)
+  publicationStatus     TemplatePublicationStatus @default(DRAFT) @map("publication_status")
+  uniquenessFingerprint String?                   @unique @map("uniqueness_fingerprint")
+  generalizedConfig     Json                      @map("generalized_config")
+  safetyReview          Json?                     @map("safety_review")
+  publicationDecision   Json?                     @map("publication_decision")
+  createdAt             DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  books      Book[]
+  jobs       Job[]
+  owner      User?  @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  sourceBook Book?  @relation("TemplateSourceBook", fields: [sourceBookId], references: [id], onDelete: SetNull)
+
+  @@index([visibility, publicationStatus])
+  @@index([storyType, educationalSubtype])
+  @@index([ownerUserId])
+  @@map("templates")
+}
+
+model Book {
+  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String     @map("user_id") @db.Uuid
+  templateId       String?    @map("template_id") @db.Uuid
+  title            String?
+  status           BookStatus @default(DRAFT)
+  config           Json
+  storyText        Json?      @map("story_text")
+  moderationResult Json?      @map("moderation_result")
+  shareTokenHash   String?    @unique @map("share_token_hash")
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  characters     Character[]
+  jobs           Job[]
+  pages          BookPage[]
+  pictures       Picture[]
+  ratings        Rating[]
+  sourceTemplate Template?   @relation("TemplateSourceBook")
+  template       Template?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([templateId])
+  @@map("books")
+}
+
+model Character {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  bookId      String        @map("book_id") @db.Uuid
+  kind        CharacterKind
+  displayName String        @map("display_name")
+  attributes  Json?
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+  @@index([bookId])
+  @@map("characters")
+}
+
+model BookPage {
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookId                  String   @map("book_id") @db.Uuid
+  pageNumber              Int      @map("page_number")
+  textContent             String   @map("text_content")
+  illustrationDescription String   @map("illustration_description")
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  book    Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  picture Picture?
+
+  @@unique([bookId, pageNumber])
+  @@map("book_pages")
+}
+
+model Picture {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookId          String        @map("book_id") @db.Uuid
+  pageId          String        @unique @map("page_id") @db.Uuid
+  jobId           String?       @unique @map("job_id") @db.Uuid
+  status          PictureStatus @default(PENDING)
+  prompt          String
+  style           String
+  storageBucket   String?       @map("storage_bucket")
+  storageKey      String?       @map("storage_key")
+  imageUrl        String?       @map("image_url")
+  providerAssetId String?       @map("provider_asset_id")
+  safetyReview    Json?         @map("safety_review")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  book Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  job  Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  page BookPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([bookId, status])
+  @@map("pictures")
+}
+
+model Job {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  bookId        String?   @map("book_id") @db.Uuid
+  templateId    String?   @map("template_id") @db.Uuid
+  externalJobId String?   @unique @map("external_job_id")
+  type          JobType
+  status        JobStatus @default(QUEUED)
+  payload       Json
+  result        Json?
+  errorCode     String?   @map("error_code")
+  errorMessage  String?   @map("error_message")
+  attempts      Int       @default(0)
+  maxAttempts   Int       @default(3) @map("max_attempts")
+  availableAt   DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
+  expiresAt     DateTime? @map("expires_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  book     Book?     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  pictures Picture[]
+  template Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, availableAt])
+  @@index([type, status])
+  @@index([userId])
+  @@index([bookId])
+  @@map("jobs")
+}
+
+model Rating {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  bookId    String      @map("book_id") @db.Uuid
+  value     RatingValue
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([bookId])
+  @@index([userId])
+  @@map("ratings")
+}
+
+model ReferralProgram {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String   @unique @map("user_id") @db.Uuid
+  referralCode     String   @unique @map("referral_code")
+  referredByUserId String?  @map("referred_by_user_id") @db.Uuid
+  acceptedCount    Int      @default(0) @map("accepted_count")
+  rewardState      Json?    @map("reward_state")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  referredByUser User? @relation("ReferralRecipient", fields: [referredByUserId], references: [id], onDelete: SetNull)
+  user           User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([referredByUserId])
+  @@map("referral_programs")
+}

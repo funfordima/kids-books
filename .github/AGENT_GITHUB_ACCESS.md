@@ -39,12 +39,22 @@ finally {
 }
 ```
 
+Verify from the active worktree. If `.tools\bin\gh.exe` is missing because the current checkout is a sibling worktree, use the bundled CLI from the primary worktree, for example `D:\projects\ai\kids-books\.tools\bin\gh.exe`.
+
+Do not fall back to PATH-only `gh` checks until the bundled CLI path has been searched.
+
 Verify:
 
 ```powershell
-& ".\.tools\bin\gh.exe" auth status
-& ".\.tools\bin\gh.exe" project list
-& ".\.tools\bin\gh.exe" issue list --repo funfordima/kids-books --limit 1
+$gh = ".\.tools\bin\gh.exe"
+if (-not (Test-Path $gh)) {
+  $gh = "D:\projects\ai\kids-books\.tools\bin\gh.exe"
+}
+
+& $gh auth status
+& $gh project list
+& $gh issue list --repo funfordima/kids-books --limit 1
+& $gh project field-list 1 --owner funfordima --format json
 ```
 
 ## Agent Rules
@@ -58,3 +68,13 @@ Agents must not:
 - Depend on browser/device OAuth for normal operations.
 
 If auth fails, Orchestrator stops the workflow before assigning implementation.
+
+## Board / PR Gate
+
+Before code work starts or a PR is reported to the user, agents must verify:
+
+- the parent issue and role subtasks are present on `DarkFactory SDLC`;
+- actual Project Status options have been read from the board;
+- required status transitions were applied using real board options;
+- the PR was added to the board or a permission blocker is recorded;
+- the PR body references the parent issue and canonical role subtasks.
