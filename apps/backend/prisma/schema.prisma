@@ -90,6 +90,13 @@ enum JobStatus {
   @@map("job_status")
 }
 
+enum RatingValue {
+  THUMBS_UP
+  THUMBS_DOWN
+
+  @@map("rating_value")
+}
+
 model User {
   id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email              String             @unique
@@ -152,9 +159,8 @@ model Template {
 
   books      Book[]
   jobs       Job[]
-  owner      User?    @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
-  ratings    Rating[]
-  sourceBook Book?    @relation("TemplateSourceBook", fields: [sourceBookId], references: [id], onDelete: SetNull)
+  owner      User?  @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  sourceBook Book?  @relation("TemplateSourceBook", fields: [sourceBookId], references: [id], onDelete: SetNull)
 
   @@index([visibility, publicationStatus])
   @@index([storyType, educationalSubtype])
@@ -192,15 +198,15 @@ model Book {
 model Character {
   id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId      String        @map("user_id") @db.Uuid
-  bookId      String?       @map("book_id") @db.Uuid
+  bookId      String        @map("book_id") @db.Uuid
   kind        CharacterKind
   displayName String        @map("display_name")
   attributes  Json?
   createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  book Book? @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, kind])
   @@index([bookId])
@@ -226,7 +232,7 @@ model BookPage {
 model Picture {
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   bookId          String        @map("book_id") @db.Uuid
-  pageId          String?       @unique @map("page_id") @db.Uuid
+  pageId          String        @unique @map("page_id") @db.Uuid
   jobId           String?       @unique @map("job_id") @db.Uuid
   status          PictureStatus @default(PENDING)
   prompt          String
@@ -239,9 +245,9 @@ model Picture {
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  book Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  job  Job?      @relation(fields: [jobId], references: [id], onDelete: SetNull)
-  page BookPage? @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  book Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  job  Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  page BookPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   @@index([bookId, status])
   @@map("pictures")
@@ -279,21 +285,18 @@ model Job {
 }
 
 model Rating {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId     String   @map("user_id") @db.Uuid
-  bookId     String?  @map("book_id") @db.Uuid
-  templateId String?  @map("template_id") @db.Uuid
-  score      Int
-  comment    String?
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  bookId    String      @map("book_id") @db.Uuid
+  value     RatingValue
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  book     Book?     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  template Template? @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, bookId])
   @@index([bookId])
-  @@index([templateId])
   @@index([userId])
   @@map("ratings")
 }

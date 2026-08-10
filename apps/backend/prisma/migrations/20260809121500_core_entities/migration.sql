@@ -9,6 +9,7 @@ CREATE TYPE "character_kind" AS ENUM ('PARENT', 'CHILD', 'FRIEND', 'PET', 'SIBLI
 CREATE TYPE "picture_status" AS ENUM ('PENDING', 'GENERATING', 'READY', 'FAILED');
 CREATE TYPE "job_type" AS ENUM ('BOOK_GENERATION', 'PICTURE_GENERATION', 'TEMPLATE_PUBLICATION', 'PDF_EXPORT');
 CREATE TYPE "job_status" AS ENUM ('QUEUED', 'ACTIVE', 'COMPLETED', 'FAILED', 'CANCELED', 'EXPIRED');
+CREATE TYPE "rating_value" AS ENUM ('THUMBS_UP', 'THUMBS_DOWN');
 
 CREATE TABLE "users" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -75,7 +76,7 @@ CREATE TABLE "books" (
 CREATE TABLE "characters" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "user_id" UUID NOT NULL,
-  "book_id" UUID,
+  "book_id" UUID NOT NULL,
   "kind" "character_kind" NOT NULL,
   "display_name" TEXT NOT NULL,
   "attributes" JSONB,
@@ -98,7 +99,7 @@ CREATE TABLE "book_pages" (
 CREATE TABLE "pictures" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "book_id" UUID NOT NULL,
-  "page_id" UUID,
+  "page_id" UUID NOT NULL,
   "job_id" UUID,
   "status" "picture_status" NOT NULL DEFAULT 'PENDING',
   "prompt" TEXT NOT NULL,
@@ -137,10 +138,8 @@ CREATE TABLE "jobs" (
 CREATE TABLE "ratings" (
   "id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "user_id" UUID NOT NULL,
-  "book_id" UUID,
-  "template_id" UUID,
-  "score" INTEGER NOT NULL,
-  "comment" TEXT,
+  "book_id" UUID NOT NULL,
+  "value" "rating_value" NOT NULL,
   "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" TIMESTAMPTZ(6) NOT NULL,
   CONSTRAINT "ratings_pkey" PRIMARY KEY ("id")
@@ -183,8 +182,8 @@ CREATE INDEX "jobs_status_available_at_idx" ON "jobs"("status", "available_at");
 CREATE INDEX "jobs_type_status_idx" ON "jobs"("type", "status");
 CREATE INDEX "jobs_user_id_idx" ON "jobs"("user_id");
 CREATE INDEX "jobs_book_id_idx" ON "jobs"("book_id");
+CREATE UNIQUE INDEX "ratings_user_id_book_id_key" ON "ratings"("user_id", "book_id");
 CREATE INDEX "ratings_book_id_idx" ON "ratings"("book_id");
-CREATE INDEX "ratings_template_id_idx" ON "ratings"("template_id");
 CREATE INDEX "ratings_user_id_idx" ON "ratings"("user_id");
 CREATE UNIQUE INDEX "referral_programs_user_id_key" ON "referral_programs"("user_id");
 CREATE UNIQUE INDEX "referral_programs_referral_code_key" ON "referral_programs"("referral_code");
@@ -205,7 +204,6 @@ ALTER TABLE "jobs" ADD CONSTRAINT "jobs_book_id_fkey" FOREIGN KEY ("book_id") RE
 ALTER TABLE "jobs" ADD CONSTRAINT "jobs_template_id_fkey" FOREIGN KEY ("template_id") REFERENCES "templates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "jobs" ADD CONSTRAINT "jobs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ratings" ADD CONSTRAINT "ratings_book_id_fkey" FOREIGN KEY ("book_id") REFERENCES "books"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "ratings" ADD CONSTRAINT "ratings_template_id_fkey" FOREIGN KEY ("template_id") REFERENCES "templates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ratings" ADD CONSTRAINT "ratings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "referral_programs" ADD CONSTRAINT "referral_programs_referred_by_user_id_fkey" FOREIGN KEY ("referred_by_user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "referral_programs" ADD CONSTRAINT "referral_programs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
