@@ -1,205 +1,133 @@
 ---
 name: github-board-setup
-description: "GitHub Projects (board) setup guide for DarkFactory. Creates and configures a GitHub Project board with SDLC phase columns, automation rules, and PR linking. Use when: setting up a new repository, initializing the board for the first time, understanding board workflows, configuring GitHub Actions for automation."
+description: "GitHub Projects (board) setup guide for DarkFactory. Creates and configures a GitHub Project board with SDLC phase fields, automation rules, and PR linking. Use when setting up a new repository, initializing the board, understanding board workflows, or configuring GitHub Actions automation."
 ---
 
 # GitHub Projects Board Setup
 
-The DarkFactory agents work with a **GitHub Projects board** as the canonical source of stories and progress tracking.
+The DarkFactory agents work with a GitHub Projects board as the canonical source of stories and progress tracking.
 
 ## Board Structure
 
 ### Project Type
-- **Project format**: GitHub Projects v2 (table view)
-- **Visibility**: Public (recommended) or Private (if sensitive)
-- **Link**: `/projects/N` in the repository
 
-### Column Structure (Status Field)
+- Project format: GitHub Projects v2 table view
+- Visibility: Public or Private
+- Project name: `DarkFactory SDLC`
 
-| Column | When Story Moves Here | Agent Responsibility |
-|--------|---------------------|---------------------|
-| **Backlog** | Created but not assigned | ProjectManager (initial creation) |
-| **Ready for Dev** | ANALYZE phase complete, DESIGN approved | Orchestrator (handoff trigger) |
-| **In Progress** | Developer starts implementation | Developer (auto-move on commit or manual) |
-| **In Review** | quality-gate-check PASS, sent to CodeReviewer | CodeReviewer (receives work) |
-| **Changes Requested** | CodeReviewer returns REQUEST_CHANGES | Developer (manual move + fix) |
-| **Done** | CodeReviewer APPROVE + VERIFY phase clear | Orchestrator (phase gate pass) |
+### Status Field
 
-### Custom Fields (in addition to Status)
+The current physical board has exactly these Status options:
+
+| Status | Meaning | Owner |
+|--------|---------|-------|
+| `Todo` | Created but not routed or blocked by predecessor | ProjectManager / Orchestrator |
+| `In Progress` | Active story, verification, review, or blocked recovery represented by comments | Orchestrator + active role |
+| `Done` | Required role evidence is complete and Orchestrator verifies the parent gate | Orchestrator |
+
+Do not assume physical `Backlog`, `Ready for Dev`, `In Review`, or `Changes Requested` options exist. Represent those conceptual states with `In Progress` plus structured issue or PR comments.
+
+### Custom Fields
 
 | Field | Type | Purpose |
 |-------|------|---------|
-| Phase | Single select | Maps to SDLC_PLAN.md phase (Phase 1–6) |
-| Priority | Single select | P0 (blocking) / P1 (current) / P2 (next) |
-| Story Points | Number | Optional: complexity estimate |
-| PR Link | Text | URL to the pull request (auto-filled by GitHub Actions) |
+| Phase | Single select | Maps to `docs/SDLC_PLAN.md` phase, Phase 1 through Phase 6 |
+| Priority | Single select | P0 blocking, P1 current, P2 next |
+| Story Points | Number | Optional complexity estimate |
+| PR Link | Text | URL to the pull request |
 
-## Setup Steps
+## Required Workflow
 
-### 1. Create the GitHub Project
+1. ProjectManager creates Markdown parent story and role subtasks.
+2. ProjectManager adds all items to the board with Status `Todo`, then re-queries the board to verify presence, Phase, Priority, and Status.
+3. Orchestrator picks the next eligible `Todo` story only after predecessors are complete.
+4. Orchestrator moves the parent story and Developer subtask to `In Progress` before any source edits.
+5. Developer implements exactly one parent story on `feature/N-story-title`.
+6. Developer records branch, commits, changed files, commands, and known gaps on only the Developer subtask.
+7. Tester reruns authoritative gates on the exact SHA. Developer-run checks are not Tester PASS.
+8. Developer opens a PR to `development` with `closes #N` only after Tester PASS.
+9. CodeReviewer reviews only after Tester PASS and verifies the PR contains exactly one parent story.
+10. Orchestrator moves parent and role subtasks to `Done` only after required role evidence and integration rules are satisfied.
 
-```bash
-# Via GitHub UI:
-# 1. Go to Repository → Projects tab
-# 2. Click "New project"
-# 3. Select "Table" template
-# 4. Name: "DarkFactory SDLC"
-# 5. Description: "AI Children's Book Generator — Phase-driven development"
-```
+## Manual Board Recovery
 
-### 2. Configure Columns & Fields
+If work starts while the parent story or Developer subtask is still `Todo`:
 
-**Default view columns**:
-- Status (select from list above)
-- Phase (Phase 1–6)
-- Priority (P0, P1, P2)
-- PR Link (text field for URL)
-- Assignees
-- Created date
+1. Stop implementation.
+2. Move only the currently eligible parent story and Developer subtask to `In Progress`.
+3. Leave dependent stories in `Todo` with a blocking comment.
+4. Add a structured recovery comment to the Developer subtask.
+5. Split or discard changes if one branch contains multiple parent stories.
 
-### 3. Automation Rules (GitHub Actions)
+## Views
 
-Create `.github/workflows/board-automation.yml`:
+### Active Sprint
 
-```yaml
-name: Board Automation
+- Filter: Status = `In Progress`
+- Sort by: Phase, then Priority
 
-on:
-  pull_request:
-    types: [opened, ready_for_review, converted_to_draft]
-  issues:
-    types: [opened]
-  workflow_dispatch:
+### Phase Backlog
 
-jobs:
-  link-pr-to-issue:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Link PR to board issue
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const pr = context.payload.pull_request;
-            if (!pr) return;
-            
-            // Extract issue number from PR description or branch name
-            const issueMatch = pr.body?.match(/#(\d+)/) || pr.head.ref.match(/#(\d+)/);
-            if (!issueMatch) return;
-            
-            const issueNumber = parseInt(issueMatch[1]);
-            const issue = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber
-            });
-            
-            // Add PR link to issue body if not present
-            if (!issue.data.body?.includes(pr.html_url)) {
-              const newBody = (issue.data.body || '') + `\n\n**PR**: [${pr.number}](${pr.html_url})`;
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body: newBody
-              });
-            }
-
-  update-board-status:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Update board when PR opened
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const pr = context.payload.pull_request;
-            if (!pr) return;
-            
-            // Fetch associated issue
-            const issueMatch = pr.body?.match(/#(\d+)/) || pr.head.ref.match(/#(\d+)/);
-            if (!issueMatch) return;
-            
-            const issueNumber = parseInt(issueMatch[1]);
-            // Note: Direct board updates require GraphQL; implement via GitHub Projects API
-```
-
-### 4. Manual Setup (Current Workaround)
-
-Until full GitHub Actions automation is in place:
-
-1. **When issue is created**: ProjectManager adds to board in "Backlog"
-2. **When moving to "Ready for Dev"**: Orchestrator moves column, assigns to @Developer
-3. **When PR opened**: Developer includes `closes #N` in PR description
-4. **When PR links issue**: GitHub auto-adds "PR" field link
-5. **When PR merged**: Issue auto-closes (if PR description had `closes #N`), moves to "Done"
-
-### 5. Board Filters & Views
-
-**View 1: Active Sprint**
-- Filter: Status ≠ Backlog AND Status ≠ Done
-- Sort by: Phase, then Priority (P0 → P2)
-- Purpose: What the team is currently working on
-
-**View 2: Phase 3 Backlog**
-- Filter: Phase = 3 AND Status = Backlog
+- Filter: Phase = active phase and Status = `Todo`
 - Sort by: Priority, then Created
-- Purpose: Planning next sprint
 
-**View 3: Blocked Issues**
-- Filter: Status = "Changes Requested" OR custom "Blocked" label
-- Sort by: Priority
-- Purpose: Issues waiting for developer fixes
+### Blocked Work
+
+- Filter: Status = `In Progress` plus `Blocked` label or structured blocking comments.
 
 ## Agent Board Workflows
 
 ### Orchestrator
-```
-1. Load board via GitHub MCP
-2. Filter: Status = "Ready for Dev", Phase = Active
-3. List to user: "Next 3 stories ready to build"
-4. On task complete: move issue → "Done" via GitHub Projects API
+
+```text
+1. Discover board fields and Status options.
+2. Verify parent story and role subtasks are present.
+3. Pick one eligible Todo story.
+4. Move parent story and Developer subtask to In Progress.
+5. Route Developer.
+6. Verify role evidence before Done.
 ```
 
 ### ProjectManager
-```
-1. Create GitHub issue with user-story-format template
-2. Auto-add to board: Status = "Backlog"
-3. Set: Phase, Priority fields
-4. Return: issue URL to Orchestrator
+
+```text
+1. Create structured Markdown issues.
+2. Add parent and subtasks to board as Todo.
+3. Set Phase and Priority.
+4. Re-query and return board evidence.
 ```
 
 ### Developer
+
+```text
+1. Verify parent and Developer subtask are In Progress.
+2. Create feature/N-story-title.
+3. Implement exactly one parent issue.
+4. Update only Developer subtask.
+5. Hand off to Tester.
 ```
-1. Read issue from board (Status = "In Progress")
-2. Create branch: feature/N-story-title (N = issue number)
-3. Implement + tests
-4. Create PR with: "closes #N" in description
-5. Merge → issue auto-closes + board auto-updates
+
+### Tester
+
+```text
+1. Verify board state and exact SHA.
+2. Run required gates independently.
+3. Update only Tester subtask with PASS, FAIL, or BLOCKED.
 ```
 
 ### CodeReviewer
-```
-1. Find issues in "In Review" column
-2. Run review checklist
-3. Return: APPROVE → move to "Done", or REQUEST_CHANGES → move to "Changes Requested"
-```
 
-## GitHub MCP Configuration
-
-The GitHub MCP tool (already in `.vscode/mcp.json`) provides:
-- Query issues/PRs/projects
-- Create/update issues
-- Link PRs to issues
-- Move issues between columns (via GraphQL)
-
-Example query:
-```
-@github list issues in digital-ggods repo with label:darkfactory and status:ready-for-dev
+```text
+1. Verify Tester PASS for the reviewed SHA.
+2. Verify PR references one parent issue and targets development.
+3. Run review and security checklist.
+4. Update only Reviewer subtask and PR review/comment.
 ```
 
 ## Best Practices
 
-1. **Every issue gets a Phase label** — required, not optional
-2. **Every PR references an issue** — include `closes #N` or `fixes #N` in description
-3. **Status field is the source of truth** — don't rely on issue labels for workflow state
-4. **Auto-move to "In Progress" on commit** — Developer commits with `#N` in message → webhook updates board
-5. **Board review before phase advance** — Verify all "In Review" issues are approved before marking phase complete
+1. Every issue gets Phase and Priority fields.
+2. Every PR references exactly one issue with `closes #N`.
+3. Status field is the source of truth; labels do not replace workflow state.
+4. Never rely on commit auto-move. Orchestrator verifies board state before source edits.
+5. Board review happens before phase advancement.

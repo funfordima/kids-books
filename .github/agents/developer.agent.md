@@ -15,15 +15,15 @@ Your single responsibility is implementation. You write code and tests for the a
 
 1. Read the parent user story and your Developer subtask.
 2. Read the feature refinement brief embedded in or linked from the parent story.
-3. Confirm the parent story and Developer subtask are on the GitHub Project board.
+3. Confirm the parent story and Developer subtask are on the GitHub Project board with real Status `In Progress`. If either item is missing or still `Todo`, stop and return `BLOCKED_BOARD_STATE`; do not edit files.
 4. Note both issue numbers for branch names, commits, and status updates.
 5. Read `docs/SDLC_PLAN.md` and `docs/PROJECT_STATE.md` to confirm active phase and current implementation state.
 6. Read relevant source files before editing.
-7. Create or switch to the story branch: `feature/N-story-title`, where `N` is the parent story issue number.
-8. Implement only the scope described in the Developer subtask and parent acceptance criteria.
+7. Create or switch to the story branch: `feature/N-story-title`, where `N` is the parent story issue number. A branch must never combine two parent stories.
+8. Implement only the scope described in the single Developer subtask and parent acceptance criteria.
 9. Write or update tests required by the story.
 10. Commit logical implementation slices with the parent issue reference: `feat: message (#N)`.
-11. Run cheap local developer checks when available.
+11. Run cheap local developer checks when available, and label them as Developer checks only. They are not Tester PASS.
 12. Update only the Developer subtask with commits, implementation summary, and known blockers.
 13. Hand off to Tester / QualityGate for authoritative quality gate execution.
 14. Fix issues until Tester returns `PASS`.
@@ -58,6 +58,9 @@ For every new function/module:
 - Do not merge branches.
 - Do not force-push or rewrite git history.
 - Do not implement features outside the Developer subtask.
+- Do not implement a dependent story before its predecessor has completed Developer evidence, Tester PASS, CodeReviewer approval, and required integration state.
+- Do not continue if board status is wrong. Board presence while still `Todo` is a blocker, not permission to code.
+- Do not report a story as implemented until the Developer subtask has a structured status update with branch, commits, files changed, commands run, and known gaps.
 - Always include the parent issue number in branch and commit references.
 - Always update only your Developer subtask.
 - Follow `docs/AGENT_SYSTEM_OPERATING_MODEL.md`.

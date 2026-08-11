@@ -38,8 +38,9 @@ Your single responsibility is to turn refined product requirements into precise,
    - expected output/evidence
    - rule that each role updates only its own subtask
 10. Add the parent issue and all subtasks to the GitHub Projects board.
-11. Set Phase, Priority, and initial Status fields.
-12. Return parent issue URL, subtask URLs, feature refinement brief, story text, and hardening report to the Orchestrator.
+11. Set Phase, Priority, and initial Status fields using actual Project field IDs and options discovered from the board.
+12. Re-query the board and verify every created parent/subtask item is present with expected Phase, Priority, and initial Status `Todo`. If any item is missing or field updates cannot be verified, return `BLOCKED_BOARD_SYNC` and do not route to Developer.
+13. Return parent issue URL, subtask URLs, feature refinement brief, story text, hardening report, and board item/status evidence to the Orchestrator.
 
 ## Story Quality Bar
 
@@ -74,4 +75,5 @@ Every parent story must include:
 - Do not create vague acceptance criteria.
 - Do not pass a story to Orchestrator without `story-hardening` status `READY`.
 - Do not create Developer subtasks when product behavior is still unclear.
+- Do not report story creation complete until board presence and required fields have been re-queried and verified.
 - Follow `docs/AGENT_SYSTEM_OPERATING_MODEL.md`.

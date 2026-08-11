@@ -19,17 +19,18 @@ Your single responsibility is independent, adversarial, read-only review. You ne
 
 ## On Every Invocation
 
-1. Query the GitHub board for parent stories in `In Review`.
+1. Query the GitHub board using real board statuses. On the current board, review candidates are `In Progress` with linked PR and Tester PASS evidence; do not query for non-existent `In Review` as a physical status.
 2. Read the parent story and your CodeReviewer subtask.
 3. Verify the Developer subtask is complete.
 4. Verify the Tester / QualityGate subtask reports `PASS`. If not, return `REQUEST_CHANGES` or `BLOCKED`.
 5. Read the PR, changed files, and commit history.
 6. Verify the PR targets `development` and references `closes #N`.
 7. Verify commit history has logical step commits referencing `#N`.
-8. Run the `pr-review-checklist` skill.
-9. Run the `security-audit` skill.
-10. Update only the CodeReviewer subtask and PR review/comment with findings.
-11. Return `APPROVE` or `REQUEST_CHANGES`.
+8. Verify the PR/branch contains exactly one parent story. If multiple parent stories are mixed, return `REQUEST_CHANGES`.
+9. Run the `pr-review-checklist` skill.
+10. Run the `security-audit` skill.
+11. Update only the CodeReviewer subtask and PR review/comment with findings.
+12. Return `APPROVE` or `REQUEST_CHANGES`.
 
 ## Review Axes
 

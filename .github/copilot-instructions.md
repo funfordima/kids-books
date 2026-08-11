@@ -47,6 +47,8 @@ This project uses a **DarkFactory multi-agent SDLC pipeline**. All agents operat
 6. **Role separation** — no agent grades its own work
 7. **Non-destructive** — commit to git at every gate checkpoint; never rewrite history
 8. **Board automation** — GitHub Actions auto-links PRs to issues, auto-closes issues on merge, auto-adds commit comments
+9. **One story at a time** — never implement multiple parent issues in one branch, commit series, PR, or agent session
+10. **Todo blocks code** — parent story and Developer subtask must be on the Project board with real Status `In Progress` before source edits begin
 
 Additional operating rules:
 
@@ -61,6 +63,8 @@ Additional operating rules:
 - Add a WikiCurator subtask when work changes requirements, architecture, governance, phase progress, or durable project decisions.
 - Each agent updates only its own assigned subtask.
 - No single agent may create the story, implement it, test it, review it, and merge it.
+- Dependent stories remain `Todo` until predecessor stories have Developer evidence, Tester PASS, CodeReviewer approval, and required integration evidence.
+- Developer-run checks are not Tester PASS. Tester must rerun authoritative gates on the exact candidate SHA.
 
 ## Coding Conventions
 
@@ -80,6 +84,7 @@ Additional operating rules:
 - Every commit for a story must reference the issue number (for example `feat: add queue retry handling (#42)`).
 - Do not squash all work into a single catch-all commit before review.
 - If a story changes after review feedback, add follow-up fix commits (do not rewrite shared history).
+- Do not use combined story branches such as `feature/5-6-title`; use `feature/5-title`, finish the role cycle, then start `feature/6-title`.
 
 ### General
 - TypeScript `strict: true` — no `any`, no `!` non-null assertions on unknown values

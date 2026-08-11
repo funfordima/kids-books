@@ -1,6 +1,6 @@
 # Project State Snapshot
 
-Last updated: 2026-08-09
+Last updated: 2026-08-11
 Scope: repository-wide status with implementation snapshot and completion logging protocol.
 
 ## 1. Current Result (What We Have)
@@ -86,6 +86,11 @@ Required update checklist:
 6. Add links to evidence (tests, typecheck, docs, or gates) when available.
 
 ## 6. Implementation Log
+
+### 2026-08-11 - Agent workflow strict board/process recovery rules
+- Audited the live `DarkFactory SDLC` board and confirmed the physical Status options are `Todo`, `In Progress`, and `Done`; conceptual statuses such as `Ready for Dev`, `In Review`, and `Changes Requested` must be represented through real board values plus structured comments.
+- Hardened Orchestrator, ProjectManager, Developer, Tester, CodeReviewer, GitHub access, board quick reference, Copilot instructions, and board setup skill rules: one parent story per branch/PR/session, `Todo` blocks source edits, dependent stories stay `Todo`, Developer checks are not Tester PASS, and ProjectManager must re-query board items after creation.
+- Added explicit process-recovery rules for out-of-process work: stop implementation, identify affected parent/subtasks/branch/commits/files/statuses, move only the eligible story to `In Progress`, leave dependent stories `Todo`, add structured recovery comments, and split or discard mixed-story changes before review.
 
 ### 2026-08-09 - Step 4 Prisma core schema and migrations
 - Added Prisma 7.9.1 and the PostgreSQL driver adapter to the backend workspace, with reproducible `prisma:generate`, `prisma:format`, and `prisma:validate` scripts and build/typecheck pre-generation hooks.

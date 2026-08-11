@@ -1,6 +1,6 @@
 # Agent System Operating Model
 
-Last updated: 2026-08-09
+Last updated: 2026-08-11
 
 This project must be implemented through the DarkFactory agent system. The goal is to model a real development team, not to let one agent perform every role.
 
@@ -16,6 +16,10 @@ This project must be implemented through the DarkFactory agent system. The goal 
 8. A story is not Done until quality gates pass and the CodeReviewer approves.
 9. Agents must verify the actual GitHub Project field/options before every status transition; documentation names are not a substitute for current board state.
 10. A PR is not considered provided until it is linked or added to the Project board, references the parent issue, targets the story's base branch, and uses the story's expected feature branch unless an explicit exception is recorded.
+11. Exactly one parent story may be implemented at a time. A branch, commit series, PR, and Developer evidence update must reference one parent issue only.
+12. A dependent story must remain `Todo` until its predecessor has Developer evidence, Tester PASS, CodeReviewer APPROVE, and required integration evidence.
+13. Starting implementation while the parent story or Developer subtask is still `Todo` is a process failure. The agent must stop immediately, report the failure, update the board/comment for recovery, and wait for Orchestrator direction before more code changes.
+14. Local quality commands run by Developer are developer checks only. They never count as Tester PASS, and they must not be used to move a Tester subtask to `Done`.
 
 ## Required Agent Roles
 
@@ -29,6 +33,8 @@ Owns coordination only.
 - Chooses the next eligible story.
 - Assigns work to specialist agents.
 - Moves parent story status only when role outputs justify it.
+- Routes only one parent story at a time; batching adjacent SDLC steps is forbidden unless each story has separately completed its full role cycle.
+- Stops and records process recovery if implementation began before board status or role-subtask readiness was correct.
 - Does not write product code.
 - Does not review code.
 
@@ -51,7 +57,8 @@ Owns implementation only.
 - Creates/uses the story feature branch.
 - Commits logical implementation slices referencing the issue number.
 - Updates only the Developer subtask with implementation progress and gate notes.
-- Confirms the parent story and Developer subtask are on the board and no longer in backlog before the first implementation commit.
+- Confirms the parent story and Developer subtask are on the board and have real Status `In Progress` before the first implementation change. Presence on the board while still `Todo` is not sufficient.
+- Implements exactly one parent issue per branch. If asked to implement multiple SDLC steps, finish the current story through Developer evidence and Tester handoff before starting the next branch/story.
 - Does not approve or review its own work.
 
 ### Tester / QualityGate
@@ -108,11 +115,11 @@ The parent story describes product value, functional behavior, acceptance criter
 
 ## Status Rules
 
-- Parent story starts in `Backlog`.
-- Orchestrator moves parent story to `Ready for Dev` only after refinement is complete.
-- Developer moves its subtask to `In Progress` when implementation starts.
-- Tester moves its subtask to `In Progress` when gates start, then `Done` only when gates pass.
-- CodeReviewer moves its subtask to `In Review`, then `Done` or `Changes Requested`.
+- Parent story starts in the real board status `Todo`.
+- Orchestrator moves the parent story to the real board status `In Progress` only after refinement/hardening is complete and the Developer subtask is ready to route.
+- Developer may start only after both parent story and Developer subtask are `In Progress`.
+- Tester moves or requests movement of the Tester subtask to `In Progress` when gates start, then `Done` only after PASS.
+- CodeReviewer reviews only after Tester PASS and moves or requests movement of the Reviewer subtask to `Done` or records a blocking comment.
 - Parent story moves to `Done` only after Developer, Tester, and CodeReviewer subtasks are Done and the PR is merged or ready per the active phase rule.
 - If a WikiCurator subtask is required, parent story cannot move to `Done` until WikiCurator has updated or explicitly reported `NO_CHANGE`.
 
@@ -127,6 +134,17 @@ Before reporting a PR as ready for downstream review, Orchestrator verifies:
 - expected branch/base are correct;
 - exact candidate SHA is recorded on the Developer and Tester subtasks;
 - Tester PASS and CodeReviewer state are not inferred from the implementing agent's own statements.
+
+## Process Recovery
+
+If any agent discovers work was started outside the required board/role flow:
+
+1. Stop all implementation immediately.
+2. Identify the affected parent story, role subtasks, branch, commits, working-tree files, and board statuses.
+3. Move only the currently eligible parent story and its Developer subtask to `In Progress`; leave dependent future stories in `Todo` with a blocking comment.
+4. Split or discard out-of-scope changes before review if one branch contains more than one parent story.
+5. Add a structured recovery comment to the Developer subtask before any further commits.
+6. Tester and CodeReviewer must treat pre-recovery local checks as non-authoritative context only.
 
 ## GitHub Wiki Requirement
 

@@ -76,5 +76,8 @@ Before code work starts or a PR is reported to the user, agents must verify:
 - the parent issue and role subtasks are present on `DarkFactory SDLC`;
 - actual Project Status options have been read from the board;
 - required status transitions were applied using real board options;
+- the parent story and Developer subtask are `In Progress` before code work starts;
 - the PR was added to the board or a permission blocker is recorded;
 - the PR body references the parent issue and canonical role subtasks.
+
+Board presence is not enough. If a story or Developer subtask is present but still `Todo`, implementation is blocked until Orchestrator moves the eligible story items to `In Progress` and records routing evidence.
