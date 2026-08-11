@@ -1,11 +1,11 @@
 # Project State Snapshot
 
-Last updated: 2026-08-09
+Last updated: 2026-08-11
 Scope: repository-wide status with implementation snapshot and completion logging protocol.
 
 ## 1. Current Result (What We Have)
 
-This repository contains project governance, an initialized frontend design-system foundation, the Step 1 monorepo application scaffold, the Step 2 local service configuration, the Step 3 backend module foundation, and the Step 4 Prisma persistence schema baseline.
+This repository contains project governance, an initialized frontend design-system foundation, the Step 1 monorepo application scaffold, the Step 2 local service configuration, the Step 3 backend module foundation, the Step 4 Prisma persistence schema baseline, and the Step 5 provider-independent BullMQ generation queue scaffold.
 
 Implemented artifacts:
 - SDLC governance plan in `docs/SDLC_PLAN.md`
@@ -19,6 +19,7 @@ Implemented artifacts:
 - Typed backend auth and domain boundary contracts for Google OAuth readiness/start/callback, replaceable OAuth config source, authenticated parent/session context, protected users/books/templates/jobs controllers, DTO/identifier validation, and explicit deferred-operation errors
 - Prisma 7 PostgreSQL schema and initial SQL migration for users, subscriptions, templates, books, book pages, characters, pictures, jobs, ratings, and referral programs under `apps/backend/prisma`
 - Backend Prisma generation, validation, and build hooks plus a fail-closed `DatabaseModule`/`PrismaService` boundary for future repository wiring
+- BullMQ/Redis generation queue contracts under `apps/backend/src/jobs`, including separate book and picture job payload schemas, deterministic idempotency IDs, centralized retry/retention options, producer and worker factories, lifecycle ports, and sanitized queue errors
 - Minimal strict-TypeScript Next.js App Router frontend integrated around the existing design system
 - Consumable `@kids-books/shared` TypeScript package used by both applications
 - Root build, typecheck, lint, test, and V8 coverage scripts plus minimal scaffold tests; ESLint 9 flat configs analyze frontend, backend, and shared source/tests while TypeScript remains a separate gate; generated Prisma client output is reproducible and ignored from source-control/lint/coverage
@@ -50,6 +51,7 @@ The application scaffold and design-system flow now work as follows:
 9. Developers copy `infra/docker/.env.example` to the ignored `infra/docker/.env`, validate `infra/docker/compose.yaml`, and start PostgreSQL, Redis, and MinIO with Docker Compose.
 10. Compose waits on service-specific health checks and exposes configurable PostgreSQL, Redis, MinIO API, and MinIO console ports on `127.0.0.1` by default.
 11. PostgreSQL rows, Redis append-only data, and MinIO objects persist in named volumes across normal stop/start or container recreation; volume deletion remains a separate, explicitly destructive operation.
+12. Queue contracts validate schema-versioned identifier-only payloads before enqueue, create deterministic BullMQ-compatible job IDs, apply three total attempts with exponential 1000 ms backoff, retain terminal metadata for 24 hours, and dispatch workers only through injectable processor ports.
 
 ## 3. Architecture Baseline (Effective)
 
@@ -66,10 +68,10 @@ See `docs/SDLC_PLAN.md` (Requirements Override section) for canonical details.
 ## 4. What Is Not Implemented Yet
 
 Not yet present in this snapshot:
-- Functional product behavior scheduled for Steps 5 and later
+- Functional product behavior scheduled for Steps 6 and later
 - Repository classes and database-backed user/book/template/job behavior wired into the protected controllers
 - Real Google OAuth package integration, sessions/JWTs, token exchange, and provider callbacks
-- BullMQ queue implementation and Redis-backed job processing
+- Runtime Redis worker process wiring, AI provider orchestration, direct Prisma queue adapters, and storage uploads
 - Token build pipeline automation (Style Dictionary or equivalent)
 - Automated warning-only governance checks wired into CI for token/content validation
 
@@ -86,6 +88,13 @@ Required update checklist:
 6. Add links to evidence (tests, typecheck, docs, or gates) when available.
 
 ## 6. Implementation Log
+
+### 2026-08-11 - Step 5 BullMQ generation queue scaffold
+- Added backend BullMQ dependencies and queue contracts for separate book and picture generation pipelines, including strict Zod payload schemas, deterministic idempotency IDs, centralized retry/backoff/retention options, queue producer behavior, worker factories, lifecycle ports, and sanitized retryable/non-retryable error classification.
+- Updated `JobsService` status to report the implemented BullMQ contract instead of the previous placeholder asset-rendering plan while keeping runtime Redis queue connection optional until worker wiring.
+- Added focused mocked Vitest coverage for payload rejection, Redis config parsing, idempotency, retry/retention config, and worker dispatch/failure behavior.
+- Developer verification on the Step 5-only branch: `npm run lint -w @kids-books/backend`, `npm run typecheck -w @kids-books/backend`, and `npm run test:coverage -w @kids-books/backend` passed. Backend coverage: 85.77% lines and 65.88% branches across 12 test files and 38 tests.
+- Scope boundary: this Step 5 branch intentionally does not include AI provider ports/adapters, story moderation/orchestration, image prompt generation, OpenAI dependencies, runtime worker packaging, direct Prisma writes, or storage uploads. Those remain Step 6 and later work.
 
 ### 2026-08-09 - Step 4 Prisma core schema and migrations
 - Added Prisma 7.9.1 and the PostgreSQL driver adapter to the backend workspace, with reproducible `prisma:generate`, `prisma:format`, and `prisma:validate` scripts and build/typecheck pre-generation hooks.

@@ -17,8 +17,10 @@ describe("JobsService", () => {
     expect(service.getStatus()).toEqual({
       resource: "jobs",
       queue: "not-configured",
-      plannedQueueProvider: "bullmq",
-      supportedKinds: ["book-generation", "asset-rendering"]
+      queueProvider: "bullmq",
+      supportedKinds: ["book-generation", "picture-generation"],
+      attempts: 3,
+      terminalRetentionSeconds: 86400
     });
   });
 
