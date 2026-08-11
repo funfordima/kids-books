@@ -21,6 +21,12 @@ export interface QueueProgressEvent {
   percent?: number;
 }
 
+export interface GenerationProcessorContext {
+  reportProgress(
+    event: Pick<QueueProgressEvent, "stage" | "percent">
+  ): Promise<void>;
+}
+
 export interface QueueTerminalEvent {
   jobId: string;
   payload: GenerationJobPayload;
@@ -40,11 +46,17 @@ export interface GenerationQueueLifecyclePort {
 }
 
 export interface BookGenerationProcessorPort {
-  process(payload: BookGenerationPayload): Promise<void>;
+  process(
+    payload: BookGenerationPayload,
+    context: GenerationProcessorContext
+  ): Promise<void>;
 }
 
 export interface PictureGenerationProcessorPort {
-  process(payload: PictureGenerationPayload): Promise<void>;
+  process(
+    payload: PictureGenerationPayload,
+    context: GenerationProcessorContext
+  ): Promise<void>;
 }
 
 export class NoopGenerationQueueLifecycle implements GenerationQueueLifecyclePort {

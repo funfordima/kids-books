@@ -6,7 +6,13 @@ import {
   createNonRetryableQueueError,
   createRetryableQueueError
 } from "./queue.errors";
-import type { GenerationQueueLifecyclePort } from "./queue.lifecycle";
+import type {
+  GenerationProcessorContext,
+  GenerationQueueLifecyclePort,
+  QueueFailureEvent,
+  QueueProgressEvent,
+  QueueTerminalEvent
+} from "./queue.lifecycle";
 import type { BookGenerationPayload } from "./queue.payloads";
 import type { PictureGenerationPayload } from "./queue.payloads";
 
@@ -28,47 +34,121 @@ const createJob = (): Job<BookGenerationPayload> =>
 
 interface MockLifecycle {
   port: GenerationQueueLifecyclePort;
-  active: Mock;
-  completed: Mock;
-  failed: Mock;
+  active: Mock<(event: QueueTerminalEvent) => Promise<void>>;
+  progress: Mock<(event: QueueProgressEvent) => Promise<void>>;
+  completed: Mock<(event: QueueTerminalEvent) => Promise<void>>;
+  failed: Mock<(event: QueueFailureEvent) => Promise<void>>;
 }
 
 const createLifecycle = (): MockLifecycle => {
-  const active = vi.fn();
-  const completed = vi.fn();
-  const failed = vi.fn();
+  const active = vi
+    .fn<(event: QueueTerminalEvent) => Promise<void>>()
+    .mockResolvedValue(undefined);
+  const progress = vi
+    .fn<(event: QueueProgressEvent) => Promise<void>>()
+    .mockResolvedValue(undefined);
+  const completed = vi
+    .fn<(event: QueueTerminalEvent) => Promise<void>>()
+    .mockResolvedValue(undefined);
+  const failed = vi
+    .fn<(event: QueueFailureEvent) => Promise<void>>()
+    .mockResolvedValue(undefined);
 
   return {
     port: {
       queued: vi.fn(),
       active,
-      progress: vi.fn(),
+      progress,
       completed,
       failed
     },
     active,
+    progress,
     completed,
     failed
   };
 };
 
+type BookProcessMock = (
+  payload: BookGenerationPayload,
+  context: GenerationProcessorContext
+) => Promise<void>;
+
+type PictureProcessMock = (
+  payload: PictureGenerationPayload,
+  context: GenerationProcessorContext
+) => Promise<void>;
+
 describe("generation worker processing", () => {
   it("dispatches valid jobs to the injected processor", async () => {
     const lifecycle = createLifecycle();
-    const process = vi.fn().mockResolvedValue(undefined);
+    let receivedContext: GenerationProcessorContext | undefined;
+    const process = vi.fn<BookProcessMock>().mockImplementation(
+      (_payload, context) => {
+        receivedContext = context;
+        return Promise.resolve();
+      }
+    );
     const processor = { process };
 
     await processBookGenerationJob(createJob(), processor, lifecycle.port);
 
-    expect(process).toHaveBeenCalledWith(payload);
+    expect(process).toHaveBeenCalledOnce();
+    expect(receivedContext).toBeDefined();
+    expect(typeof receivedContext?.reportProgress).toBe("function");
     expect(lifecycle.active).toHaveBeenCalledOnce();
     expect(lifecycle.completed).toHaveBeenCalledOnce();
+  });
+
+  it("lets processors emit typed progress through the lifecycle boundary", async () => {
+    const lifecycle = createLifecycle();
+    const processor = {
+      process: vi.fn<BookProcessMock>().mockImplementation(
+        async (
+          _payload: BookGenerationPayload,
+          context: GenerationProcessorContext
+        ) => {
+          await context.reportProgress({ stage: "story", percent: 50 });
+        }
+      )
+    };
+
+    await processBookGenerationJob(createJob(), processor, lifecycle.port);
+
+    expect(lifecycle.progress).toHaveBeenCalledWith({
+      jobId: "job-1",
+      payload,
+      stage: "story",
+      attempt: 1,
+      percent: 50
+    });
+  });
+
+  it("fails explicitly when processor progress percent is invalid", async () => {
+    const lifecycle = createLifecycle();
+    const processor = {
+      process: vi.fn<BookProcessMock>().mockImplementation(
+        async (
+          _payload: BookGenerationPayload,
+          context: GenerationProcessorContext
+        ) => {
+          await context.reportProgress({ stage: "story", percent: 101 });
+        }
+      )
+    };
+
+    await expect(
+      processBookGenerationJob(createJob(), processor, lifecycle.port)
+    ).rejects.toThrow("Queue progress percent must be an integer from 0 to 100.");
+    const failureEvent = lifecycle.failed.mock.calls.at(0)?.[0];
+    expect(failureEvent?.error.code).toBe("QUEUE_PAYLOAD_INVALID");
+    expect(failureEvent?.error.retryable).toBe(false);
   });
 
   it("lets retryable processor failures retry under BullMQ policy", async () => {
     const lifecycle = createLifecycle();
     const error = createRetryableQueueError();
-    const process = vi.fn().mockRejectedValue(error);
+    const process = vi.fn<BookProcessMock>().mockRejectedValue(error);
     const processor = { process };
 
     await expect(
@@ -80,7 +160,9 @@ describe("generation worker processing", () => {
   it("marks non-retryable processor failures unrecoverable", async () => {
     const lifecycle = createLifecycle();
     const processor = {
-      process: vi.fn().mockRejectedValue(createNonRetryableQueueError())
+      process: vi
+        .fn<BookProcessMock>()
+        .mockRejectedValue(createNonRetryableQueueError())
     };
 
     await expect(
@@ -105,12 +187,19 @@ describe("generation worker processing", () => {
       attemptsMade: 1
     } as Job<PictureGenerationPayload>;
     const lifecycle = createLifecycle();
-    const process = vi.fn().mockResolvedValue(undefined);
+    let receivedContext: GenerationProcessorContext | undefined;
+    const process = vi.fn<PictureProcessMock>().mockImplementation(
+      (_payload, context) => {
+        receivedContext = context;
+        return Promise.resolve();
+      }
+    );
     const processor = { process };
 
     await processPictureGenerationJob(job, processor, lifecycle.port);
 
-    expect(process).toHaveBeenCalledWith(picturePayload);
+    expect(process).toHaveBeenCalledWith(picturePayload, receivedContext);
+    expect(typeof receivedContext?.reportProgress).toBe("function");
     expect(lifecycle.completed).toHaveBeenCalledWith(
       expect.objectContaining({ attemptsMade: 2 })
     );

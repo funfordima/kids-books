@@ -39,6 +39,15 @@ export const loadRedisQueueConfig = (
 
   const parsedUrl = new URL(result.data.REDIS_URL);
   const dbPath = parsedUrl.pathname.replace("/", "");
+  const db = dbPath ? Number(dbPath) : undefined;
+
+  if (dbPath && (!/^\d+$/u.test(dbPath) || !Number.isSafeInteger(db))) {
+    throw new QueuePipelineError(
+      "QUEUE_CONFIG_INVALID",
+      "Redis queue configuration is invalid.",
+      false
+    );
+  }
 
   return {
     url: result.data.REDIS_URL,
@@ -46,7 +55,7 @@ export const loadRedisQueueConfig = (
     port: Number(parsedUrl.port || 6379),
     username: parsedUrl.username || undefined,
     password: parsedUrl.password || undefined,
-    db: dbPath ? Number(dbPath) : undefined
+    db
   };
 };
 

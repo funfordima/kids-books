@@ -6,6 +6,7 @@ import {
 import { sanitizeQueueError, QueuePipelineError } from "./queue.errors";
 import type {
   BookGenerationProcessorPort,
+  GenerationProcessorContext,
   GenerationQueueLifecyclePort,
   PictureGenerationProcessorPort
 } from "./queue.lifecycle";
@@ -16,30 +17,63 @@ import {
   type PictureGenerationPayload
 } from "./queue.payloads";
 
+const createProcessorContext = (
+  jobId: string,
+  payload: BookGenerationPayload | PictureGenerationPayload,
+  attempt: number,
+  lifecycle: GenerationQueueLifecyclePort
+): GenerationProcessorContext => ({
+  reportProgress: async ({ stage, percent }) => {
+    if (
+      percent !== undefined &&
+      (!Number.isInteger(percent) || percent < 0 || percent > 100)
+    ) {
+      throw new QueuePipelineError(
+        "QUEUE_PAYLOAD_INVALID",
+        "Queue progress percent must be an integer from 0 to 100.",
+        false
+      );
+    }
+
+    await lifecycle.progress({
+      jobId,
+      payload,
+      stage,
+      attempt,
+      percent
+    });
+  }
+});
+
 export const processBookGenerationJob = async (
   job: Job<BookGenerationPayload>,
   processor: BookGenerationProcessorPort,
   lifecycle: GenerationQueueLifecyclePort
 ): Promise<void> => {
   const payload = parseBookGenerationPayload(job.data);
+  const jobId = job.id ?? "";
+  const attempt = job.attemptsMade + 1;
   await lifecycle.active({
-    jobId: job.id ?? "",
+    jobId,
     payload,
     attemptsMade: job.attemptsMade
   });
 
   try {
-    await processor.process(payload);
-    await lifecycle.completed({
-      jobId: job.id ?? "",
+    await processor.process(
       payload,
-      attemptsMade: job.attemptsMade + 1
+      createProcessorContext(jobId, payload, attempt, lifecycle)
+    );
+    await lifecycle.completed({
+      jobId,
+      payload,
+      attemptsMade: attempt
     });
   } catch (error) {
     await lifecycle.failed({
-      jobId: job.id ?? "",
+      jobId,
       payload,
-      attemptsMade: job.attemptsMade + 1,
+      attemptsMade: attempt,
       error: sanitizeQueueError(error)
     });
 
@@ -57,24 +91,29 @@ export const processPictureGenerationJob = async (
   lifecycle: GenerationQueueLifecyclePort
 ): Promise<void> => {
   const payload = parsePictureGenerationPayload(job.data);
+  const jobId = job.id ?? "";
+  const attempt = job.attemptsMade + 1;
   await lifecycle.active({
-    jobId: job.id ?? "",
+    jobId,
     payload,
     attemptsMade: job.attemptsMade
   });
 
   try {
-    await processor.process(payload);
-    await lifecycle.completed({
-      jobId: job.id ?? "",
+    await processor.process(
       payload,
-      attemptsMade: job.attemptsMade + 1
+      createProcessorContext(jobId, payload, attempt, lifecycle)
+    );
+    await lifecycle.completed({
+      jobId,
+      payload,
+      attemptsMade: attempt
     });
   } catch (error) {
     await lifecycle.failed({
-      jobId: job.id ?? "",
+      jobId,
       payload,
-      attemptsMade: job.attemptsMade + 1,
+      attemptsMade: attempt,
       error: sanitizeQueueError(error)
     });
 
