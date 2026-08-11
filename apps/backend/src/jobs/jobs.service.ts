@@ -5,15 +5,18 @@ import type {
   GenerationJobStatus,
   JobsModuleStatus
 } from "./jobs.interfaces";
+import { QUEUE_ATTEMPTS, QUEUE_RETENTION_SECONDS } from "./queue.constants";
 
 @Injectable()
 export class JobsService {
   public getStatus(): JobsModuleStatus {
     return {
       resource: "jobs",
-      queue: "not-configured",
-      plannedQueueProvider: "bullmq",
-      supportedKinds: ["book-generation", "asset-rendering"]
+      queue: process.env.REDIS_URL ? "configured" : "not-configured",
+      queueProvider: "bullmq",
+      supportedKinds: ["book-generation", "picture-generation"],
+      attempts: QUEUE_ATTEMPTS,
+      terminalRetentionSeconds: QUEUE_RETENTION_SECONDS
     };
   }
 

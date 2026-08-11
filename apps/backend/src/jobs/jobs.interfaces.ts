@@ -1,4 +1,4 @@
-export type JobKind = "book-generation" | "asset-rendering";
+export type JobKind = "book-generation" | "picture-generation";
 export type JobStatus = "queued" | "generating" | "completed" | "failed";
 
 export interface GenerationJobStatus {
@@ -11,7 +11,9 @@ export interface GenerationJobStatus {
 
 export interface JobsModuleStatus {
   resource: "jobs";
-  queue: "not-configured";
-  plannedQueueProvider: "bullmq";
+  queue: "configured" | "not-configured";
+  queueProvider: "bullmq";
   supportedKinds: readonly JobKind[];
+  attempts: 3;
+  terminalRetentionSeconds: 86400;
 }
