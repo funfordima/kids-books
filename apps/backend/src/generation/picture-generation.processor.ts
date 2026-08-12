@@ -1,6 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { createNonRetryableQueueError } from "../jobs/queue.errors";
-import type { PictureGenerationProcessorPort } from "../jobs/queue.lifecycle";
+import type {
+  GenerationProcessorContext,
+  PictureGenerationProcessorPort
+} from "../jobs/queue.lifecycle";
 import type { PictureGenerationPayload } from "../jobs/queue.payloads";
 import {
   createRetryableGenerationError,
@@ -21,7 +24,12 @@ export class PictureGenerationProcessor implements PictureGenerationProcessorPor
     private readonly images: ImageGenerationPort
   ) {}
 
-  public async process(payload: PictureGenerationPayload): Promise<void> {
+  public async process(
+    payload: PictureGenerationPayload,
+    context: GenerationProcessorContext
+  ): Promise<void> {
+    await context.reportProgress({ stage: "illustration", percent: 10 });
+
     const page = await this.pages.loadApprovedPageForImage({
       bookId: payload.bookId,
       pageId: payload.pageId,
@@ -42,7 +50,9 @@ export class PictureGenerationProcessor implements PictureGenerationProcessorPor
     }
 
     try {
+      await context.reportProgress({ stage: "illustration", percent: 60 });
       await this.images.generateImage(prompt);
+      await context.reportProgress({ stage: "illustration", percent: 100 });
     } catch (error) {
       if (error instanceof GenerationPipelineError && !error.retryable) {
         throw createNonRetryableQueueError(error.message);

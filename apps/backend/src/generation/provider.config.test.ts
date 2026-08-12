@@ -5,8 +5,8 @@ describe("OpenAI provider configuration", () => {
   it("loads server-only defaults from environment", () => {
     expect(loadOpenAiProviderConfig({ OPENAI_API_KEY: "key" })).toEqual({
       apiKey: "key",
-      textModel: "gpt-5.6-terra",
-      imageModel: "gpt-image-2",
+      textModel: "gpt-5.1",
+      imageModel: "gpt-image-1",
       moderationModel: "omni-moderation-latest",
       timeoutMs: 30000
     });

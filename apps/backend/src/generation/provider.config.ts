@@ -4,8 +4,8 @@ import { GenerationPipelineError } from "./generation.errors";
 const providerConfigSchema = z
   .object({
     OPENAI_API_KEY: z.string().trim().min(1),
-    OPENAI_TEXT_MODEL: z.string().trim().min(1).default("gpt-5.6-terra"),
-    OPENAI_IMAGE_MODEL: z.string().trim().min(1).default("gpt-image-2"),
+    OPENAI_TEXT_MODEL: z.string().trim().min(1).default("gpt-5.1"),
+    OPENAI_IMAGE_MODEL: z.string().trim().min(1).default("gpt-image-1"),
     OPENAI_MODERATION_MODEL: z
       .string()
       .trim()

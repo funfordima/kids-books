@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createNonRetryableGenerationError } from "./generation.errors";
 import type { PictureGenerationPayload } from "../jobs/queue.payloads";
 import { PictureGenerationProcessor } from "./picture-generation.processor";
+import type { GenerationProcessorContext } from "../jobs/queue.lifecycle";
 
 const payload: PictureGenerationPayload = {
   kind: "picture-generation",
@@ -12,6 +13,18 @@ const payload: PictureGenerationPayload = {
   pageId: "page-1",
   pictureId: "picture-1",
   correlationId: "corr-1"
+};
+
+const createContext = (): {
+  context: GenerationProcessorContext;
+  reportProgress: ReturnType<typeof vi.fn>;
+} => {
+  const reportProgress = vi.fn().mockResolvedValue(undefined);
+
+  return {
+    context: { reportProgress },
+    reportProgress
+  };
 };
 
 describe("picture generation processor", () => {
@@ -35,12 +48,17 @@ describe("picture generation processor", () => {
         .mockResolvedValue({ bytes: new Uint8Array(), contentType: "image/png" })
     };
     const processor = new PictureGenerationProcessor(pages, moderation, images);
+    const { context, reportProgress } = createContext();
 
-    await processor.process(payload);
+    await processor.process(payload, context);
 
     expect(images.generateImage).toHaveBeenCalledWith(
       expect.stringContaining("no text, no words, no letters, no numbers")
     );
+    expect(reportProgress).toHaveBeenCalledWith({
+      stage: "illustration",
+      percent: 100
+    });
   });
 
   it("does not call image provider when moderation flags the prompt", async () => {
@@ -60,7 +78,9 @@ describe("picture generation processor", () => {
       images
     );
 
-    await expect(processor.process(payload)).rejects.toMatchObject({
+    await expect(
+      processor.process(payload, createContext().context)
+    ).rejects.toMatchObject({
       code: "QUEUE_PROCESSOR_NON_RETRYABLE",
       retryable: false
     });
@@ -92,7 +112,9 @@ describe("picture generation processor", () => {
       }
     );
 
-    await expect(processor.process(payload)).rejects.toMatchObject({
+    await expect(
+      processor.process(payload, createContext().context)
+    ).rejects.toMatchObject({
       code: "QUEUE_PROCESSOR_NON_RETRYABLE",
       retryable: false
     });
