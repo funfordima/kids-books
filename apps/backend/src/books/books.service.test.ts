@@ -1,5 +1,6 @@
 import { BadRequestException, ServiceUnavailableException } from "@nestjs/common";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { BillingService } from "../billing/billing.service";
 import { BooksController } from "./books.controller";
 import { BooksModule } from "./books.module";
 import { BooksService } from "./books.service";
@@ -24,7 +25,10 @@ describe("BooksService", () => {
 
   it("exposes the status through its controller", () => {
     const service = new BooksService();
-    const controller = new BooksController(service);
+    const billingService = {
+      assertCanGenerate: vi.fn()
+    } as unknown as BillingService;
+    const controller = new BooksController(service, billingService);
 
     expect(controller.getStatus()).toEqual(service.getStatus());
     expect(() => controller.listBooks({ parent })).toThrow(
