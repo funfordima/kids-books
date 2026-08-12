@@ -8,6 +8,52 @@ import type {
 } from "./provider.ports";
 import type { BookGenerationConfig } from "./book-config";
 import type { OpenAiProviderConfig } from "./provider.config";
+import {
+  createNonRetryableGenerationError,
+  createRetryableGenerationError,
+  GenerationPipelineError
+} from "./generation.errors";
+
+const mapOpenAiError = (error: unknown): GenerationPipelineError => {
+  if (error instanceof GenerationPipelineError) {
+    return error;
+  }
+
+  const status =
+    typeof error === "object" && error !== null && "status" in error
+      ? Number(error.status)
+      : undefined;
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String(error.code)
+      : undefined;
+
+  if (code === "ETIMEDOUT" || code === "ECONNABORTED") {
+    return createRetryableGenerationError(
+      "GENERATION_PROVIDER_TIMEOUT",
+      "Provider request timed out."
+    );
+  }
+
+  if (status === 429) {
+    return createRetryableGenerationError(
+      "GENERATION_PROVIDER_RATE_LIMIT",
+      "Provider rate limit was reached."
+    );
+  }
+
+  if (status !== undefined && status >= 400 && status < 500) {
+    return createNonRetryableGenerationError(
+      "GENERATION_PROVIDER_REJECTED",
+      "Provider rejected the request."
+    );
+  }
+
+  return createRetryableGenerationError(
+    "GENERATION_PROVIDER_UNAVAILABLE",
+    "Provider could not complete the request."
+  );
+};
 
 export class OpenAiModerationAdapter implements ModerationPort {
   private readonly client: OpenAI;
@@ -20,10 +66,16 @@ export class OpenAiModerationAdapter implements ModerationPort {
   }
 
   public async moderateText(input: string): Promise<ModerationResult> {
-    const response = await this.client.moderations.create({
-      model: this.config.moderationModel,
-      input
-    });
+    let response;
+
+    try {
+      response = await this.client.moderations.create({
+        model: this.config.moderationModel,
+        input
+      });
+    } catch (error) {
+      throw mapOpenAiError(error);
+    }
 
     return { flagged: response.results.some((result) => result.flagged) };
   }
@@ -44,45 +96,59 @@ export class OpenAiStoryTextAdapter implements StoryTextGenerationPort {
     prompt: string
   ): Promise<unknown> {
     void _config;
-    const response = await this.client.responses.create({
-      model: this.config.textModel,
-      input: prompt,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "children_book_story",
-          strict: true,
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            required: ["title", "pages"],
-            properties: {
-              title: { type: "string" },
-              pages: {
-                type: "array",
-                items: {
-                  type: "object",
-                  additionalProperties: false,
-                  required: [
-                    "pageNumber",
-                    "text",
-                    "illustrationDescription"
-                  ],
-                  properties: {
-                    pageNumber: { type: "number" },
-                    text: { type: "string" },
-                    illustrationDescription: { type: "string" }
+    let response;
+
+    try {
+      response = await this.client.responses.create({
+        model: this.config.textModel,
+        input: prompt,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "children_book_story",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["title", "pages"],
+              properties: {
+                title: { type: "string" },
+                pages: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    required: [
+                      "pageNumber",
+                      "text",
+                      "illustrationDescription"
+                    ],
+                    properties: {
+                      pageNumber: { type: "number" },
+                      text: { type: "string" },
+                      illustrationDescription: { type: "string" }
+                    }
                   }
                 }
               }
             }
           }
         }
-      }
-    });
+      });
+    } catch (error) {
+      throw mapOpenAiError(error);
+    }
 
     const output = response.output_text;
-    return JSON.parse(output);
+
+    try {
+      return JSON.parse(output);
+    } catch {
+      throw createNonRetryableGenerationError(
+        "GENERATION_SCHEMA_INVALID",
+        "Provider story output was not valid structured JSON."
+      );
+    }
   }
 }
 
@@ -97,14 +163,24 @@ export class OpenAiImageAdapter implements ImageGenerationPort {
   }
 
   public async generateImage(prompt: string): Promise<ImageGenerationResult> {
-    const response = await this.client.images.generate({
-      model: this.config.imageModel,
-      prompt
-    });
+    let response;
+
+    try {
+      response = await this.client.images.generate({
+        model: this.config.imageModel,
+        prompt
+      });
+    } catch (error) {
+      throw mapOpenAiError(error);
+    }
+
     const image = response.data?.[0]?.b64_json;
 
     if (!image) {
-      return { bytes: new Uint8Array(), contentType: "image/png" };
+      throw createNonRetryableGenerationError(
+        "GENERATION_PROVIDER_REJECTED",
+        "Provider image output was empty."
+      );
     }
 
     return {
