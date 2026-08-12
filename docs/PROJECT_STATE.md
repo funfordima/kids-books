@@ -1,11 +1,11 @@
 # Project State Snapshot
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 Scope: repository-wide status with implementation snapshot and completion logging protocol.
 
 ## 1. Current Result (What We Have)
 
-This repository contains project governance, an initialized frontend design-system foundation, the Step 1 monorepo application scaffold, the Step 2 local service configuration, the Step 3 backend module foundation, the Step 4 Prisma persistence schema baseline, and the Step 5 provider-independent BullMQ generation queue scaffold.
+This repository contains project governance, an initialized frontend design-system foundation, the Step 1 monorepo application scaffold, the Step 2 local service configuration, the Step 3 backend module foundation, the Step 4 Prisma persistence schema baseline, the Step 5 provider-independent BullMQ generation queue scaffold, the Step 6 AI safety/provider boundary, and the Step 7 accessible Next.js product foundation.
 
 Implemented artifacts:
 - SDLC governance plan in `docs/SDLC_PLAN.md`
@@ -22,8 +22,8 @@ Implemented artifacts:
 - BullMQ/Redis generation queue contracts under `apps/backend/src/jobs`, including separate book and picture job payload schemas, deterministic idempotency IDs, centralized retry/retention options, producer and worker factories, lifecycle ports, and sanitized queue errors
 - Provider-independent AI generation contracts under `apps/backend/src/generation`, including validated book config, age/story matrix checks, story and image prompt builders, OpenAI provider configuration/adapters, moderation ports, approved-content persistence/page-loading ports, story orchestration, and picture generation processor
 - Dated AI provider decision record in `docs/AI_PROVIDER_DECISION.md`
-- Minimal strict-TypeScript Next.js App Router frontend integrated around the existing design system
-- Consumable `@kids-books/shared` TypeScript package used by both applications
+- Accessible strict-TypeScript Next.js App Router product foundation with public landing/pricing/templates/login/auth callback routes, fail-closed protected dashboard/library/create routes, typed backend/auth client boundaries, and a five-step in-memory book wizard
+- Consumable `@kids-books/shared` TypeScript package used by both applications, including Step 7 shared wizard Zod contracts, age/story matrix, approved enums, page counts, and same-origin return-path validation
 - Root build, typecheck, lint, test, and V8 coverage scripts plus minimal scaffold tests; ESLint 9 flat configs analyze frontend, backend, and shared source/tests while TypeScript remains a separate gate; generated Prisma client output is reproducible and ignored from source-control/lint/coverage
 - Root strict `tsconfig.json` that typechecks backend, frontend, shared source, and co-located tests through literal `npx tsc --noEmit`
 - Docker Compose configuration for local PostgreSQL, Redis, and MinIO under `infra/docker`
@@ -48,7 +48,7 @@ The application scaffold and design-system flow now work as follows:
 4. The backend imports foundational auth, users, books, templates, and jobs modules. Auth exposes readiness/start/callback boundary contracts only, with a replaceable config source and typed authenticated parent/session context but no token exchange or provider call. Users, books, templates, and jobs expose protected controller boundaries that fail closed without an authenticated parent context and return explicit service-unavailable errors for later-step persistence/queue behavior; they do not fabricate product data or connect to repositories, BullMQ, Google OAuth packages, Redis, storage, Stripe, OpenAI, or external providers.
 5. Prisma schema validation and client generation run from `apps/backend/prisma.config.ts`; backend build/typecheck generate the local ignored Prisma client from `apps/backend/prisma/schema.prisma`.
 6. `DatabaseModule` and `PrismaService` exist as a future wiring boundary and require `DATABASE_URL` before use, but they are not imported into `AppModule` yet, preserving the current no-database startup behavior.
-7. The Next.js App Router renders a minimal server-component landing page; the existing design-system subtree remains unchanged. Next.js and `eslint-config-next` are aligned on 16.3.0 after dependency audit remediation.
+7. The Next.js App Router renders public landing, pricing, templates, login, and auth callback routes plus protected dashboard, library, and create routes. Protected routes call the typed backend session boundary and redirect to login with a validated same-origin return path when no parent session is available.
 8. Source-of-truth token JSON files remain under `apps/frontend/src/design-system/tokens`, with generated artifacts expected under `generated` and the seeded preview retained.
 9. Developers copy `infra/docker/.env.example` to the ignored `infra/docker/.env`, validate `infra/docker/compose.yaml`, and start PostgreSQL, Redis, and MinIO with Docker Compose.
 10. Compose waits on service-specific health checks and exposes configurable PostgreSQL, Redis, MinIO API, and MinIO console ports on `127.0.0.1` by default.
@@ -56,6 +56,7 @@ The application scaffold and design-system flow now work as follows:
 12. Queue contracts validate schema-versioned identifier-only payloads before enqueue, create deterministic BullMQ-compatible job IDs, apply three total attempts with exponential 1000 ms backoff, retain terminal metadata for 24 hours, and dispatch workers only through injectable processor ports.
 13. Story generation validates parent book config, moderates bounded parent text, calls a structured text-generation port, validates exact page ordering/count, moderates generated story and illustration text before persistence, saves only approved story content through a port, and enqueues one idempotent picture job per saved page.
 14. Picture generation loads approved page/style data through a port, builds a child-safe no-text image prompt, moderates the prompt, and calls an image provider port. Automated tests mock all provider, persistence, and queue calls; no paid live OpenAI call is required or performed.
+15. The frontend book wizard keeps personalization in memory only, validates the approved age/story matrix and 8/12/16 page counts through `@kids-books/shared`, submits one typed request through the backend client, disables duplicate submission while pending, and displays only backend-returned queued identifiers or accessible safe error states.
 
 ## 3. Architecture Baseline (Effective)
 
@@ -72,7 +73,7 @@ See `docs/SDLC_PLAN.md` (Requirements Override section) for canonical details.
 ## 4. What Is Not Implemented Yet
 
 Not yet present in this snapshot:
-- Frontend, billing, PDF, public-template, deployment, and QA product behavior scheduled for Steps 7 and later
+- Billing, PDF, public-template publication, deployment, and QA product behavior scheduled for Steps 8 and later
 - Repository classes and database-backed user/book/template/job behavior wired into the protected controllers
 - Real Google OAuth package integration, sessions/JWTs, token exchange, and provider callbacks
 - Runtime Redis worker process packaging, direct Prisma repository adapters for generation persistence, object storage upload, and production provider credentials/configuration
@@ -92,6 +93,14 @@ Required update checklist:
 6. Add links to evidence (tests, typecheck, docs, or gates) when available.
 
 ## 6. Implementation Log
+
+### 2026-08-12 - Step 7 accessible Next.js product foundation
+- Added shared Step 7 wizard contracts in `@kids-books/shared`: approved age bands, pronouns, story-type matrix, educational subtypes, settings, illustration styles, 8/12/16 page counts, full Zod wizard validation, and same-origin return-path normalization.
+- Added Next.js App Router product routes: public landing, pricing, templates, login, auth callback, and protected dashboard/library/create pages. Protected pages fail closed through the backend session client and do not expose protected content without a verified parent session.
+- Added typed frontend backend/auth client boundaries for session, public templates, library, auth entry, and book request submission with safe error unions, credentials-inclusive fetches, request timeouts, and no browser token storage.
+- Added a five-step in-memory book wizard for child profile, supporting characters, optional story note, story type, settings, review, and single submission. Pricing remains informational; Stripe execution is excluded until Step 8.
+- Added focused shared/frontend tests for matrix validation, safe return paths, public/protected route states, auth callback/login boundaries, typed client failure mapping, wizard validation/submission dedupe, and coverage. Developer verification passed root lint, typecheck, build, coverage, and audit. Frontend coverage: 80.23% lines and 75% branches across 4 test files and 10 tests.
+- Scope boundary: Step 7 does not implement Stripe Checkout/subscriptions, PDF/export, public-template publication, advanced reader/page-flip, live AI calls, deployment, repository-backed browser data beyond typed client boundaries, or production analytics.
 
 ### 2026-08-11 - Step 5 BullMQ generation queue scaffold
 - Added backend BullMQ dependencies and queue contracts for separate book and picture generation pipelines, including strict Zod payload schemas, deterministic idempotency IDs, centralized retry/backoff/retention options, queue producer behavior, worker factories, lifecycle ports, and sanitized retryable/non-retryable error classification.
