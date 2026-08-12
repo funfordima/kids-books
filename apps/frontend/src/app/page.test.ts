@@ -1,20 +1,46 @@
 import { describe, expect, it } from "vitest";
 import RootLayout from "./layout";
 import HomePage from "./page";
+import PricingPage from "./pricing/page";
 
-describe("frontend scaffold", () => {
-  it("renders the shared contract from the App Router page", () => {
+const collectText = (value: unknown): string => {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(collectText).join(" ");
+  }
+
+  if (typeof value === "object" && value !== null && "props" in value) {
+    const props = value.props as { children?: unknown; href?: unknown };
+    return `${typeof props.href === "string" ? props.href : ""} ${collectText(
+      props.children
+    )}`;
+  }
+
+  return "";
+};
+
+describe("frontend product foundation", () => {
+  it("renders semantic landing content and navigation shell", () => {
     const page = HomePage();
+    const layout = RootLayout({ children: page });
+    const pageContent = collectText(page);
+    const layoutContent = collectText(layout);
 
     expect(page.type).toBe("main");
-    expect(JSON.stringify(page.props.children)).toContain("0.1.0");
-  });
-
-  it("wraps page content in the root document layout", () => {
-    const child = HomePage();
-    const layout = RootLayout({ children: child });
-
+    expect(pageContent).toContain("Kids Books");
     expect(layout.type).toBe("html");
     expect(layout.props.lang).toBe("en");
+    expect(layoutContent).toContain("/create");
+  });
+
+  it("keeps pricing honest before Stripe execution exists", () => {
+    const content = collectText(PricingPage());
+
+    expect(content).toContain("$9.99 per month");
+    expect(content).toContain("Step 8");
+    expect(content).not.toContain("checkout.stripe.com");
   });
 });
