@@ -36,11 +36,12 @@ describe("frontend product foundation", () => {
     expect(layoutContent).toContain("/create");
   });
 
-  it("keeps pricing honest before Stripe execution exists", () => {
+  it("keeps pricing honest through backend-owned Stripe execution", () => {
     const content = collectText(PricingPage());
 
     expect(content).toContain("$9.99 per month");
-    expect(content).toContain("Step 8");
+    expect(content).toContain("Checkout is hosted by Stripe");
+    expect(content).toContain("verified backend entitlement state");
     expect(content).not.toContain("checkout.stripe.com");
   });
 });

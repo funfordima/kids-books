@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { CheckoutButton } from "./checkout-button";
 
 export default function PricingPage() {
   return (
@@ -6,14 +6,13 @@ export default function PricingPage() {
       <h1>Pricing</h1>
       <section className="plan" aria-labelledby="monthly-plan">
         <h2 id="monthly-plan">$9.99 per month</h2>
-        <p>Includes a seven-day trial once billing is implemented in Step 8.</p>
+        <p>Includes a seven-day trial for eligible parent accounts.</p>
         <p className="muted">
-          Checkout is not available in this Step 7 foundation. Billing access
-          must come from verified backend entitlement state, never this page.
+          Checkout is hosted by Stripe; this app never handles card details.
+          Access follows verified backend entitlement state, never this page
+          alone.
         </p>
-        <Link className="button" href="/login?returnTo=%2Fcreate">
-          Sign in to create
-        </Link>
+        <CheckoutButton />
       </section>
     </main>
   );

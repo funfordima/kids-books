@@ -5,7 +5,7 @@ Scope: repository-wide status with implementation snapshot and completion loggin
 
 ## 1. Current Result (What We Have)
 
-This repository contains project governance, an initialized frontend design-system foundation, the Step 1 monorepo application scaffold, the Step 2 local service configuration, the Step 3 backend module foundation, the Step 4 Prisma persistence schema baseline, the Step 5 provider-independent BullMQ generation queue scaffold, the Step 6 AI safety/provider boundary, and the Step 7 accessible Next.js product foundation.
+This repository contains project governance, an initialized frontend design-system foundation, the Step 1 monorepo application scaffold, the Step 2 local service configuration, the Step 3 backend module foundation, the Step 4 Prisma persistence schema baseline, the Step 5 provider-independent BullMQ generation queue scaffold, the Step 6 AI safety/provider boundary, the Step 7 accessible Next.js product foundation, and the Step 8 secure Stripe subscription implementation branch.
 
 Implemented artifacts:
 - SDLC governance plan in `docs/SDLC_PLAN.md`
@@ -24,6 +24,8 @@ Implemented artifacts:
 - Dated AI provider decision record in `docs/AI_PROVIDER_DECISION.md`
 - Accessible strict-TypeScript Next.js App Router product foundation with public landing/pricing/templates/login/auth callback routes, fail-closed protected dashboard/library/create routes, typed backend/auth client boundaries, and a five-step in-memory book wizard
 - Consumable `@kids-books/shared` TypeScript package used by both applications, including Step 7 shared wizard Zod contracts, age/story matrix, approved enums, page counts, and same-origin return-path validation
+- Secure billing contracts under `apps/backend/src/billing`, including server-owned Stripe Checkout session creation, allowlisted monthly price verification, one-time local trial eligibility, customer mapping, raw-body signed webhook verification, safe event receipts, subscription reconciliation, backend entitlement checks, and success/cancel UI boundaries
+- Stripe billing Prisma migration for enriched subscription metadata and unique minimal webhook receipts without raw payload, signature, card, invoice-detail, or secret storage
 - Root build, typecheck, lint, test, and V8 coverage scripts plus minimal scaffold tests; ESLint 9 flat configs analyze frontend, backend, and shared source/tests while TypeScript remains a separate gate; generated Prisma client output is reproducible and ignored from source-control/lint/coverage
 - Root strict `tsconfig.json` that typechecks backend, frontend, shared source, and co-located tests through literal `npx tsc --noEmit`
 - Docker Compose configuration for local PostgreSQL, Redis, and MinIO under `infra/docker`
@@ -47,16 +49,20 @@ The application scaffold and design-system flow now work as follows:
 3. The NestJS backend exposes a minimal root service response through standard module/controller/service boundaries.
 4. The backend imports foundational auth, users, books, templates, and jobs modules. Auth exposes readiness/start/callback boundary contracts only, with a replaceable config source and typed authenticated parent/session context but no token exchange or provider call. Users, books, templates, and jobs expose protected controller boundaries that fail closed without an authenticated parent context and return explicit service-unavailable errors for later-step persistence/queue behavior; they do not fabricate product data or connect to repositories, BullMQ, Google OAuth packages, Redis, storage, Stripe, OpenAI, or external providers.
 5. Prisma schema validation and client generation run from `apps/backend/prisma.config.ts`; backend build/typecheck generate the local ignored Prisma client from `apps/backend/prisma/schema.prisma`.
-6. `DatabaseModule` and `PrismaService` exist as a future wiring boundary and require `DATABASE_URL` before use, but they are not imported into `AppModule` yet, preserving the current no-database startup behavior.
+6. `DatabaseModule` and `PrismaService` require `DATABASE_URL` before use. Step 8 imports this database boundary through billing so synchronized subscription and webhook receipt state fail closed when persistence is unavailable.
 7. The Next.js App Router renders public landing, pricing, templates, login, and auth callback routes plus protected dashboard, library, and create routes. Protected routes call the typed backend session boundary and redirect to login with a validated same-origin return path when no parent session is available.
-8. Source-of-truth token JSON files remain under `apps/frontend/src/design-system/tokens`, with generated artifacts expected under `generated` and the seeded preview retained.
-9. Developers copy `infra/docker/.env.example` to the ignored `infra/docker/.env`, validate `infra/docker/compose.yaml`, and start PostgreSQL, Redis, and MinIO with Docker Compose.
-10. Compose waits on service-specific health checks and exposes configurable PostgreSQL, Redis, MinIO API, and MinIO console ports on `127.0.0.1` by default.
-11. PostgreSQL rows, Redis append-only data, and MinIO objects persist in named volumes across normal stop/start or container recreation; volume deletion remains a separate, explicitly destructive operation.
-12. Queue contracts validate schema-versioned identifier-only payloads before enqueue, create deterministic BullMQ-compatible job IDs, apply three total attempts with exponential 1000 ms backoff, retain terminal metadata for 24 hours, and dispatch workers only through injectable processor ports.
-13. Story generation validates parent book config, moderates bounded parent text, calls a structured text-generation port, validates exact page ordering/count, moderates generated story and illustration text before persistence, saves only approved story content through a port, and enqueues one idempotent picture job per saved page.
-14. Picture generation loads approved page/style data through a port, builds a child-safe no-text image prompt, moderates the prompt, and calls an image provider port. Automated tests mock all provider, persistence, and queue calls; no paid live OpenAI call is required or performed.
-15. The frontend book wizard keeps personalization in memory only, validates the approved age/story matrix and 8/12/16 page counts through `@kids-books/shared`, submits one typed request through the backend client, disables duplicate submission while pending, and displays only backend-returned queued identifiers or accessible safe error states.
+8. The frontend book wizard keeps personalization in memory only, validates the approved age/story matrix and 8/12/16 page counts through `@kids-books/shared`, submits one typed request through the backend client, disables duplicate submission while pending, and displays only backend-returned queued identifiers or accessible safe error states.
+9. Billing checkout is created only by the backend. It verifies the configured Stripe Price is active USD 999 recurring monthly, creates or reuses the mapped Customer with idempotency, rejects active/trialing duplicate subscriptions, applies a one-time local seven-day trial, and returns only the hosted Checkout session identifier and URL.
+10. Stripe webhook handling uses the raw request body plus `Stripe-Signature` and `STRIPE_WEBHOOK_SECRET` before parsing side effects. Verified events are stored by unique event ID with safe metadata only, completed duplicates are acknowledged without side effects, failed duplicates remain retryable, unknown verified events are ignored safely, and subscription lifecycle/invoice events reconcile against the current provider Subscription before local entitlement state changes.
+11. Backend entitlement checks allow only synchronized `trialing` or `active` state with valid time bounds; missing, expired, incomplete, past-due, unpaid, paused, canceled, unknown, or reconciliation-failed states deny access. Book creation now checks this backend entitlement before deferring generation persistence behavior.
+12. The Step 8 pricing/success/cancel UI is informational: it starts hosted Checkout through the backend, verifies success session ownership through the authenticated backend, and never grants access from redirect state alone.
+13. Source-of-truth token JSON files remain under `apps/frontend/src/design-system/tokens`, with generated artifacts expected under `generated` and the seeded preview retained.
+14. Developers copy `infra/docker/.env.example` to the ignored `infra/docker/.env`, validate `infra/docker/compose.yaml`, and start PostgreSQL, Redis, and MinIO with Docker Compose.
+15. Compose waits on service-specific health checks and exposes configurable PostgreSQL, Redis, MinIO API, and MinIO console ports on `127.0.0.1` by default.
+16. PostgreSQL rows, Redis append-only data, and MinIO objects persist in named volumes across normal stop/start or container recreation; volume deletion remains a separate, explicitly destructive operation.
+17. Queue contracts validate schema-versioned identifier-only payloads before enqueue, create deterministic BullMQ-compatible job IDs, apply three total attempts with exponential 1000 ms backoff, retain terminal metadata for 24 hours, and dispatch workers only through injectable processor ports.
+18. Story generation validates parent book config, moderates bounded parent text, calls a structured text-generation port, validates exact page ordering/count, moderates generated story and illustration text before persistence, saves only approved story content through a port, and enqueues one idempotent picture job per saved page.
+19. Picture generation loads approved page/style data through a port, builds a child-safe no-text image prompt, moderates the prompt, and calls an image provider port. Automated tests mock all provider, persistence, and queue calls; no paid live OpenAI call is required or performed.
 
 ## 3. Architecture Baseline (Effective)
 
@@ -73,7 +79,7 @@ See `docs/SDLC_PLAN.md` (Requirements Override section) for canonical details.
 ## 4. What Is Not Implemented Yet
 
 Not yet present in this snapshot:
-- Billing, PDF, public-template publication, deployment, and QA product behavior scheduled for Steps 8 and later
+- PDF, public-template, deployment, refunds/proration/customer portal/multi-plan billing, production Stripe account/Price setup, and QA product behavior scheduled for later steps
 - Repository classes and database-backed user/book/template/job behavior wired into the protected controllers
 - Real Google OAuth package integration, sessions/JWTs, token exchange, and provider callbacks
 - Runtime Redis worker process packaging, direct Prisma repository adapters for generation persistence, object storage upload, and production provider credentials/configuration
@@ -101,6 +107,15 @@ Required update checklist:
 - Added a five-step in-memory book wizard for child profile, supporting characters, optional story note, story type, settings, review, and single submission. Pricing remains informational; Stripe execution is excluded until Step 8.
 - Added focused shared/frontend tests for matrix validation, safe return paths, public/protected route states, auth callback/login boundaries, typed client failure mapping, wizard validation/submission dedupe, and coverage. Developer verification passed root lint, typecheck, build, coverage, and audit. Frontend coverage: 80.23% lines and 75% branches across 4 test files and 10 tests.
 - Scope boundary: Step 7 does not implement Stripe Checkout/subscriptions, PDF/export, public-template publication, advanced reader/page-flip, live AI calls, deployment, repository-backed browser data beyond typed client boundaries, or production analytics.
+
+### 2026-08-12 - Step 8 secure Stripe subscription implementation branch
+- Added backend billing module boundaries for server-owned Stripe Checkout, server-only price configuration, idempotent Customer creation/reuse, duplicate active/trialing subscription rejection, local one-time trial eligibility, raw-body signed webhook verification, unique minimal webhook receipts, provider subscription reconciliation, and fail-closed entitlement decisions.
+- Extended Prisma schema and migration SQL with enriched subscription metadata plus `stripe_webhook_events`, preserving safe event metadata only and explicitly avoiding raw payload/signature/secret/card storage.
+- Added informational pricing, checkout success, and cancel UI boundaries. Hosted Checkout starts through the backend, success verifies session ownership and entitlement through the authenticated backend, and cancel/success redirects never grant access on their own.
+- Wired protected book creation through backend entitlement enforcement before existing deferred generation persistence behavior.
+- Added mocked Stripe and UI coverage for price/trial/customer/idempotency, invalid price config, duplicate subscriptions, success verification, webhook signature rejection, duplicate/unknown event handling, reconciliation, entitlement expiry, and no-op cancel state.
+- Developer verification on the Step 8 branch: root `npm run lint`, `npm run typecheck`, `npm run build`, `npm run test:coverage`, and `npm audit` passed. Root coverage included backend 21 test files/76 tests at 80.47% lines and 68.11% branches, plus frontend 2 test files/8 tests at 95.83% lines and 90% branches.
+- Scope boundary: this Step 8 branch intentionally excludes PDF, AI/generation changes, public-template publication, refunds/proration/customer portal/multiple plans, production Stripe account/Price creation, deployment, and raw card handling.
 
 ### 2026-08-11 - Step 5 BullMQ generation queue scaffold
 - Added backend BullMQ dependencies and queue contracts for separate book and picture generation pipelines, including strict Zod payload schemas, deterministic idempotency IDs, centralized retry/backoff/retention options, queue producer behavior, worker factories, lifecycle ports, and sanitized retryable/non-retryable error classification.

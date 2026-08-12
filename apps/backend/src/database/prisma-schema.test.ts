@@ -16,6 +16,13 @@ const migration = readFileSync(
 const ratingsMigrationTable = migration.match(
   /CREATE TABLE "ratings" \([\s\S]*?\n\);/
 )?.[0];
+const stripeMigration = readFileSync(
+  join(
+    __dirname,
+    "../../prisma/migrations/20260812173000_stripe_billing/migration.sql"
+  ),
+  "utf8"
+);
 
 describe("Step 4 Prisma schema", () => {
   it("models all core SDLC entities", () => {
@@ -92,5 +99,24 @@ describe("Step 4 Prisma schema", () => {
     ]) {
       expect(migration).toContain(statement);
     }
+  });
+
+  it("records safe Stripe billing state and unique webhook receipts", () => {
+    expect(schema).toContain("enum StripeEventProcessingStatus");
+    expect(schema).toContain("model StripeWebhookEvent {");
+    expect(schema).toContain("stripeCustomerId     String?            @map(\"stripe_customer_id\")");
+    expect(schema).toContain("latestEventCreatedAt DateTime?          @map(\"latest_event_created_at\")");
+    expect(schema).toContain("stripeEventId    String                      @unique @map(\"stripe_event_id\")");
+    expect(schema).not.toContain("rawPayload");
+    expect(schema).not.toContain("card");
+
+    expect(stripeMigration).toContain(
+      "CREATE TYPE \"stripe_event_processing_status\" AS ENUM ('PROCESSED', 'IGNORED', 'FAILED');"
+    );
+    expect(stripeMigration).toContain(
+      "CREATE UNIQUE INDEX \"stripe_webhook_events_stripe_event_id_key\" ON \"stripe_webhook_events\"(\"stripe_event_id\");"
+    );
+    expect(stripeMigration).not.toContain("payload");
+    expect(stripeMigration).not.toContain("signature");
   });
 });

@@ -16,12 +16,24 @@ enum UserRole {
 
 enum SubscriptionStatus {
   INACTIVE
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
   TRIALING
   ACTIVE
   PAST_DUE
+  UNPAID
+  PAUSED
   CANCELED
 
   @@map("subscription_status")
+}
+
+enum StripeEventProcessingStatus {
+  PROCESSED
+  IGNORED
+  FAILED
+
+  @@map("stripe_event_processing_status")
 }
 
 enum BookStatus {
@@ -115,6 +127,7 @@ model User {
   referralProgram ReferralProgram?
   referredByLinks ReferralProgram[] @relation("ReferralRecipient")
   subscriptions   Subscription[]
+  stripeEvents    StripeWebhookEvent[]
   templates       Template[]
 
   @@map("users")
@@ -124,10 +137,19 @@ model Subscription {
   id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId               String             @map("user_id") @db.Uuid
   stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
+  stripeCustomerId     String?            @map("stripe_customer_id")
+  stripePriceId        String?            @map("stripe_price_id")
   plan                 String
   status               SubscriptionStatus
+  providerStatus       String?            @map("provider_status")
+  currentPeriodStart   DateTime?          @map("current_period_start") @db.Timestamptz(6)
   currentPeriodEnd     DateTime?          @map("current_period_end") @db.Timestamptz(6)
+  trialStartedAt       DateTime?          @map("trial_started_at") @db.Timestamptz(6)
   trialEndsAt          DateTime?          @map("trial_ends_at") @db.Timestamptz(6)
+  cancelAt             DateTime?          @map("cancel_at") @db.Timestamptz(6)
+  canceledAt           DateTime?          @map("canceled_at") @db.Timestamptz(6)
+  cancelAtPeriodEnd    Boolean            @default(false) @map("cancel_at_period_end")
+  latestEventCreatedAt DateTime?          @map("latest_event_created_at") @db.Timestamptz(6)
   createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -135,7 +157,30 @@ model Subscription {
 
   @@index([userId])
   @@index([status])
+  @@index([stripeCustomerId])
+  @@index([latestEventCreatedAt])
   @@map("subscriptions")
+}
+
+model StripeWebhookEvent {
+  id               String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stripeEventId    String                      @unique @map("stripe_event_id")
+  type             String
+  providerObjectId String?                     @map("provider_object_id")
+  providerCreatedAt DateTime                   @map("provider_created_at") @db.Timestamptz(6)
+  processingStatus StripeEventProcessingStatus @map("processing_status")
+  result           Json?
+  errorCode        String?                     @map("error_code")
+  userId           String?                     @map("user_id") @db.Uuid
+  receivedAt       DateTime                    @default(now()) @map("received_at") @db.Timestamptz(6)
+  processedAt      DateTime?                   @map("processed_at") @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([type, providerCreatedAt])
+  @@index([providerObjectId])
+  @@index([userId])
+  @@map("stripe_webhook_events")
 }
 
 model Template {
