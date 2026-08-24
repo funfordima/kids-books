@@ -1,9 +1,11 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "../generated/prisma/client";
 import type { PdfExportStatus } from "../generated/prisma/enums";
 import type { AuthenticatedParentContext } from "../auth/authenticated-parent";
 import type { PrismaService } from "../database/prisma.service";
 import type {
   ClaimPdfExportInput,
+  ClaimPdfExportResult,
   MarkPdfExportReadyInput,
   PdfExportBookSnapshot,
   PdfExportRecord,
@@ -99,26 +101,69 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
     return record ? this.toRecord(record) : null;
   }
 
-  public async claimExport(input: ClaimPdfExportInput): Promise<PdfExportRecord> {
-    const record = await this.prisma.pdfExport.upsert({
+  public async claimExport(
+    input: ClaimPdfExportInput
+  ): Promise<ClaimPdfExportResult> {
+    try {
+      const record = await this.prisma.pdfExport.create({
+        data: {
+          userId: input.userId,
+          bookId: input.bookId,
+          contentVersion: input.contentVersion,
+          layoutVersion: input.layoutVersion,
+          status: "PENDING"
+        }
+      });
+
+      return { record: this.toRecord(record), shouldRender: true };
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+    }
+
+    const existing = await this.prisma.pdfExport.findUniqueOrThrow({
       where: {
         bookId_contentVersion_layoutVersion: {
           bookId: input.bookId,
           contentVersion: input.contentVersion,
           layoutVersion: input.layoutVersion
         }
-      },
-      create: {
-        userId: input.userId,
-        bookId: input.bookId,
-        contentVersion: input.contentVersion,
-        layoutVersion: input.layoutVersion,
-        status: "PENDING"
-      },
-      update: {}
+      }
     });
 
-    return this.toRecord(record);
+    if (existing.status === "FAILED") {
+      const retry = await this.prisma.pdfExport.update({
+        where: { id: existing.id },
+        data: {
+          status: "PENDING",
+          errorCode: null,
+          storageBucket: null,
+          storageKey: null,
+          sha256: null,
+          byteSize: null,
+          contentType: null,
+          contentDisposition: null,
+          completedAt: null
+        }
+      });
+
+      return { record: this.toRecord(retry), shouldRender: true };
+    }
+
+    return {
+      record: this.toRecord(existing),
+      shouldRender: false
+    };
+  }
+
+  private isUniqueConstraintError(
+    error: unknown
+  ): error is Prisma.PrismaClientKnownRequestError {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    );
   }
 
   public async markExportReady(

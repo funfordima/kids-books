@@ -128,9 +128,14 @@ export class PdfExportService {
       contentVersion,
       layoutVersion
     });
+    const claimedRecord = claim.record;
 
-    if (this.isReadyReusable(claim)) {
-      return claim;
+    if (this.isReadyReusable(claimedRecord)) {
+      return claimedRecord;
+    }
+
+    if (!claim.shouldRender) {
+      throw new ConflictException("PDF export is already in progress.");
     }
 
     const limits = this.config.getLimits();
@@ -164,7 +169,7 @@ export class PdfExportService {
       });
 
       return await this.repository.markExportReady({
-        exportId: claim.id,
+        exportId: claimedRecord.id,
         storageBucket: bucket,
         storageKey: key,
         sha256,
@@ -174,7 +179,10 @@ export class PdfExportService {
       });
     } catch {
       await this.storage.deleteObject(bucket, key);
-      await this.repository.markExportFailed(claim.id, "pdf_export_failed");
+      await this.repository.markExportFailed(
+        claimedRecord.id,
+        "pdf_export_failed"
+      );
       throw new ServiceUnavailableException("PDF export failed.");
     }
   }

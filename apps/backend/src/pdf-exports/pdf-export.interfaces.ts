@@ -53,7 +53,7 @@ export interface PdfExportRepository {
     contentVersion: string,
     layoutVersion: string
   ): Promise<PdfExportRecord | null>;
-  claimExport(input: ClaimPdfExportInput): Promise<PdfExportRecord>;
+  claimExport(input: ClaimPdfExportInput): Promise<ClaimPdfExportResult>;
   markExportReady(input: MarkPdfExportReadyInput): Promise<PdfExportRecord>;
   markExportFailed(exportId: string, errorCode: string): Promise<void>;
   findAuthorizedExport(
@@ -68,6 +68,11 @@ export interface ClaimPdfExportInput {
   readonly bookId: string;
   readonly contentVersion: string;
   readonly layoutVersion: string;
+}
+
+export interface ClaimPdfExportResult {
+  readonly record: PdfExportRecord;
+  readonly shouldRender: boolean;
 }
 
 export interface MarkPdfExportReadyInput {

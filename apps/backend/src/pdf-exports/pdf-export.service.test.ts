@@ -83,7 +83,10 @@ const makeRepository = () =>
   ({
     findReadyBookSnapshot: vi.fn().mockResolvedValue(makeSnapshot()),
     findReusableExport: vi.fn().mockResolvedValue(null),
-    claimExport: vi.fn().mockResolvedValue(makeRecord({ status: "PENDING" })),
+    claimExport: vi.fn().mockResolvedValue({
+      record: makeRecord({ status: "PENDING" }),
+      shouldRender: true
+    }),
     markExportReady: vi.fn().mockImplementation((input: MarkPdfExportReadyInput) =>
       Promise.resolve(
         makeRecord({
@@ -179,6 +182,37 @@ describe("PdfExportService", () => {
     expect(repository.claimExport).not.toHaveBeenCalled();
     expect(renderer.render).not.toHaveBeenCalled();
     expect(storage.uploadPrivatePdf).not.toHaveBeenCalled();
+  });
+
+  it("does not duplicate render when another worker already claimed the export", async () => {
+    vi.mocked(repository.claimExport).mockResolvedValueOnce({
+      record: makeRecord({ status: "PENDING" }),
+      shouldRender: false
+    });
+
+    await expect(service.createExport(parent, bookId)).rejects.toThrow(
+      ConflictException
+    );
+
+    expect(renderer.render).not.toHaveBeenCalled();
+    expect(storage.uploadPrivatePdf).not.toHaveBeenCalled();
+  });
+
+  it("retries a previously failed export claim", async () => {
+    vi.mocked(repository.claimExport).mockResolvedValueOnce({
+      record: makeRecord({ status: "PENDING", storageBucket: null }),
+      shouldRender: true
+    });
+
+    await expect(service.createExport(parent, bookId)).resolves.toEqual(
+      expect.objectContaining({
+        exportId,
+        status: "ready"
+      })
+    );
+
+    expect(renderer.render).toHaveBeenCalledOnce();
+    expect(storage.uploadPrivatePdf).toHaveBeenCalledOnce();
   });
 
   it("renders escaped deterministic HTML with fallback images and private metadata", async () => {
