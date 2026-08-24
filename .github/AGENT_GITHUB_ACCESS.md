@@ -13,11 +13,19 @@ Recommended permissions:
 - Pull requests: read/write
 - Projects: read/write
 
-For a classic personal access token, use scopes:
+For a classic personal access token against the current public repository, use scopes:
+
+- `public_repo`
+- `project`
+- `read:org`
+
+If the repository becomes private, use scopes:
 
 - `repo`
 - `project`
 - `read:org`
+
+For local development, agents may load `GH_TOKEN` from the ignored repository root `.env` file into the current process only. Agents must never print, copy, commit, mount broadly, or expose `.env` contents.
 
 ## Authenticate GitHub CLI With A Token
 

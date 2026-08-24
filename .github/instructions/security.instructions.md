@@ -15,7 +15,8 @@ applyTo: "**/*.{ts,tsx}"
 ## A02 — Cryptographic Failures
 - HTTPS enforced on all environments
 - All secrets in environment variables — zero secrets in source code or git history
-- Never commit `.env.local` or any file containing real secrets
+- Never commit `.env`, `.env.local`, or any file containing real secrets
+- For local agent development, load `GH_TOKEN` from the ignored repository root `.env` file only into the current process environment; never print, copy, commit, mount broadly into containers, or expose `.env` contents
 - `DATABASE_URL`, `REDIS_URL`, `GOOGLE_CLIENT_SECRET`, `STRIPE_SECRET_KEY`, `S3_SECRET_ACCESS_KEY` are server-side only
 
 ## A03 — Injection

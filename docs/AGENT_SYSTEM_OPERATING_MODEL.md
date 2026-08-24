@@ -192,7 +192,10 @@ Recommended setup:
   - issues read/write
   - pull requests read/write
   - Projects read/write
-  - classic PAT scopes: `repo`, `project`, `read:org`
+  - classic PAT scopes for a public repository: `public_repo`, `project`, `read:org`
+  - classic PAT scopes for a private repository: `repo`, `project`, `read:org`
+
+For local development, agents may load `GH_TOKEN` from the repository root `.env` file only into the current process environment. Agents must never print, copy, commit, mount into broad containers, or expose `.env` contents. If `.env` is present, every Docker/container command must avoid mounting the repository root unless the command explicitly excludes secret files.
 
 Agents must not:
 
