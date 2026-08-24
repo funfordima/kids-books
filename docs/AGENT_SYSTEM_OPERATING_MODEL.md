@@ -232,4 +232,4 @@ if (-not $gh) {
 & $gh project field-list 1 --owner funfordima --format json
 ```
 
-The expected account is `funfordima`; required scopes include `repo`, `project`, and `read:org`. If these fail, stop and fix access before assigning implementation work. Do not continue implementation while board/PR/comment operations are known to be blocked.
+The expected account is `funfordima`; required classic PAT scopes include `public_repo`, `project`, and `read:org` for the current public repository, or `repo`, `project`, and `read:org` if the repository becomes private. If these fail, stop and fix access before assigning implementation work. Do not continue implementation while board/PR/comment operations are known to be blocked.
