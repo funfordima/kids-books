@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException } from "@nestjs/common";
+import { Inject, Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { createHash, createHmac } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, normalize, resolve, sep } from "node:path";
@@ -12,7 +12,10 @@ import type {
 
 @Injectable()
 export class DeferredPrivatePdfStorage implements PdfStorage {
-  public constructor(private readonly config: PdfExportConfigService) {}
+  public constructor(
+    @Inject(PdfExportConfigService)
+    private readonly config: PdfExportConfigService
+  ) {}
 
   public async uploadPrivatePdf(input: PdfUploadInput): Promise<void> {
     const root = this.requireRoot();

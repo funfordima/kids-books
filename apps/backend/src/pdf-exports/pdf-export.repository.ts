@@ -1,7 +1,7 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "../generated/prisma/client";
 import type { AuthenticatedParentContext } from "../auth/authenticated-parent";
-import type { PrismaService } from "../database/prisma.service";
+import { PrismaService } from "../database/prisma.service";
 import type {
   ClaimPdfExportInput,
   ClaimPdfExportResult,
@@ -35,13 +35,15 @@ interface PdfExportDelegate {
   findFirst(input: unknown): Promise<PdfExportPrismaRecord | null>;
 }
 
-interface PdfExportPrismaService extends PrismaService {
+interface PdfExportClient {
   readonly pdfExport: PdfExportDelegate;
 }
 
 @Injectable()
 export class PrismaPdfExportRepository implements PdfExportRepository {
-  public constructor(private readonly prisma: PrismaService) {}
+  public constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService
+  ) {}
 
   public async findReadyBookSnapshot(
     parent: AuthenticatedParentContext,
@@ -245,7 +247,7 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
   }
 
   private get pdfExport(): PdfExportDelegate {
-    return (this.prisma as PdfExportPrismaService).pdfExport;
+    return (this.prisma as unknown as PdfExportClient).pdfExport;
   }
 
   private toImageStatus(status: string): "READY" | "MISSING" | "FAILED" {

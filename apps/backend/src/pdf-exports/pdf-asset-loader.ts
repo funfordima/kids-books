@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException } from "@nestjs/common";
+import { Inject, Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { readFile } from "node:fs/promises";
 import { join, normalize, resolve, sep } from "node:path";
 import { PdfExportConfigService } from "./pdf-export.config";
@@ -11,7 +11,10 @@ import type {
 
 @Injectable()
 export class DeferredPdfAssetLoader implements PdfAssetLoader {
-  public constructor(private readonly config: PdfExportConfigService) {}
+  public constructor(
+    @Inject(PdfExportConfigService)
+    private readonly config: PdfExportConfigService
+  ) {}
 
   public async loadImage(
     image: PdfExportImageReference,

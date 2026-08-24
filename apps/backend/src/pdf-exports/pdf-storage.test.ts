@@ -84,21 +84,19 @@ describe("DeferredPrivatePdfStorage", () => {
             join(root, bucket, "users", "u", "books", "b", "pdf", "file.pdf")
           )
         ).resolves.toEqual(bytes);
-        await expect(
-          storage.createSignedDownload({
-            bucket,
-            key,
-            contentDisposition: 'attachment; filename="book.pdf"',
-            expiresInSeconds: 300
-          })
-        ).resolves.toEqual(
-          expect.objectContaining({
-            url: expect.stringMatching(
-              /^https:\/\/download\.example\/private\/pdf-exports\/kids-books-private\/users%2Fu%2Fbooks%2Fb%2Fpdf%2Ffile\.pdf\?expires=\d+&signature=[a-f0-9]{64}$/u
-            ),
-            expiresInSeconds: 300,
-            contentDisposition: 'attachment; filename="book.pdf"'
-          })
+        const download = await storage.createSignedDownload({
+          bucket,
+          key,
+          contentDisposition: 'attachment; filename="book.pdf"',
+          expiresInSeconds: 300
+        });
+
+        expect(download.url).toMatch(
+          /^https:\/\/download\.example\/private\/pdf-exports\/kids-books-private\/users%2Fu%2Fbooks%2Fb%2Fpdf%2Ffile\.pdf\?expires=\d+&signature=[a-f0-9]{64}$/u
+        );
+        expect(download.expiresInSeconds).toBe(300);
+        expect(download.contentDisposition).toBe(
+          'attachment; filename="book.pdf"'
         );
 
         await storage.deleteObject(bucket, key);

@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -34,11 +35,17 @@ const inFlightExports = new Map<string, Promise<PdfExportRecord>>();
 @Injectable()
 export class PdfExportService {
   public constructor(
+    @Inject(PdfExportConfigService)
     private readonly config: PdfExportConfigService,
+    @Inject(PrismaPdfExportRepository)
     private readonly repository: PrismaPdfExportRepository,
+    @Inject(BillingService)
     private readonly billingService: BillingService,
+    @Inject(DeferredPdfAssetLoader)
     private readonly assetLoader: DeferredPdfAssetLoader,
+    @Inject(HardenedPuppeteerPdfRenderer)
     private readonly renderer: HardenedPuppeteerPdfRenderer,
+    @Inject(DeferredPrivatePdfStorage)
     private readonly storage: DeferredPrivatePdfStorage
   ) {}
 

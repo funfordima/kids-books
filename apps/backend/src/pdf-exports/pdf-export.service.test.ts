@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion, @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/unbound-method */
 import {
   ConflictException,
   ForbiddenException,
@@ -228,25 +228,22 @@ describe("PdfExportService", () => {
     await service.createExport(parent, bookId);
 
     expect(assetLoader.loadImage).toHaveBeenCalledOnce();
-    expect(renderer.render).toHaveBeenCalledWith(
-      expect.objectContaining({
-        html: expect.stringContaining("&lt;Saves&gt;")
-      })
+    const renderCall = vi.mocked(renderer.render).mock.calls[0];
+    expect(renderCall).toBeDefined();
+    const renderInput = renderCall?.[0];
+    expect(renderInput?.html).toContain("&lt;Saves&gt;");
+    expect(renderInput?.html).toContain("Illustration pending");
+
+    const uploadCall = vi.mocked(storage.uploadPrivatePdf).mock.calls[0];
+    expect(uploadCall).toBeDefined();
+    const uploadInput = uploadCall?.[0];
+    expect(uploadInput?.bucket).toBe("kids-books-private");
+    expect(uploadInput?.key).toMatch(
+      /^users\/11111111-1111-4111-8111-111111111111\/books\/22222222-2222-4222-8222-222222222222\/pdf\/[a-f0-9]{64}-pdf-layout-v1\.pdf$/u
     );
-    expect(renderer.render).toHaveBeenCalledWith(
-      expect.objectContaining({
-        html: expect.stringContaining("Illustration pending")
-      })
-    );
-    expect(storage.uploadPrivatePdf).toHaveBeenCalledWith(
-      expect.objectContaining({
-        bucket: "kids-books-private",
-        key: expect.stringMatching(
-          /^users\/11111111-1111-4111-8111-111111111111\/books\/22222222-2222-4222-8222-222222222222\/pdf\/[a-f0-9]{64}-pdf-layout-v1\.pdf$/u
-        ),
-        contentType: "application/pdf",
-        contentDisposition: 'attachment; filename="mia-saves-the-moon.pdf"'
-      })
+    expect(uploadInput?.contentType).toBe("application/pdf");
+    expect(uploadInput?.contentDisposition).toBe(
+      'attachment; filename="mia-saves-the-moon.pdf"'
     );
   });
 
