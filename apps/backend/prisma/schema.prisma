@@ -36,6 +36,14 @@ enum StripeEventProcessingStatus {
   @@map("stripe_event_processing_status")
 }
 
+enum PdfExportStatus {
+  PENDING
+  READY
+  FAILED
+
+  @@map("pdf_export_status")
+}
+
 enum BookStatus {
   DRAFT
   GENERATING
@@ -129,6 +137,7 @@ model User {
   subscriptions   Subscription[]
   stripeEvents    StripeWebhookEvent[]
   templates       Template[]
+  pdfExports      PdfExport[]
 
   @@map("users")
 }
@@ -234,10 +243,38 @@ model Book {
   sourceTemplate Template?   @relation("TemplateSourceBook")
   template       Template?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
   user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pdfExports     PdfExport[]
 
   @@index([userId, status])
   @@index([templateId])
   @@map("books")
+}
+
+model PdfExport {
+  id                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String          @map("user_id") @db.Uuid
+  bookId             String          @map("book_id") @db.Uuid
+  contentVersion     String          @map("content_version")
+  layoutVersion      String          @map("layout_version")
+  status             PdfExportStatus @default(PENDING)
+  storageBucket      String?         @map("storage_bucket")
+  storageKey         String?         @map("storage_key")
+  sha256             String?
+  byteSize           Int?            @map("byte_size")
+  contentType        String?         @map("content_type")
+  contentDisposition String?         @map("content_disposition")
+  errorCode          String?         @map("error_code")
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  completedAt        DateTime?       @map("completed_at") @db.Timestamptz(6)
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, contentVersion, layoutVersion])
+  @@index([userId])
+  @@index([bookId, status])
+  @@map("pdf_exports")
 }
 
 model Character {

@@ -6,6 +6,7 @@ import { BillingModule } from "./billing/billing.module";
 import { BooksModule } from "./books/books.module";
 import { GenerationModule } from "./generation/generation.module";
 import { JobsModule } from "./jobs/jobs.module";
+import { PdfExportModule } from "./pdf-exports/pdf-export.module";
 import { TemplatesModule } from "./templates/templates.module";
 import { UsersModule } from "./users/users.module";
 
@@ -17,6 +18,7 @@ import { UsersModule } from "./users/users.module";
     BooksModule,
     TemplatesModule,
     JobsModule,
+    PdfExportModule,
     GenerationModule
   ],
   controllers: [AppController],
