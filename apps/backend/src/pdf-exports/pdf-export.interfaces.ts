@@ -103,6 +103,40 @@ export interface PdfRenderInput {
   readonly limits: PdfExportLimits;
 }
 
+export interface PdfBrowserFactory {
+  createSession(): Promise<PdfBrowserSession>;
+}
+
+export interface PdfBrowserSession {
+  newPage(): Promise<PdfBrowserPage>;
+  close(): Promise<void>;
+}
+
+export interface PdfBrowserPage {
+  setJavaScriptEnabled(enabled: boolean): Promise<void>;
+  setRequestInterception(enabled: boolean): Promise<void>;
+  on(event: "request", handler: (request: PdfBrowserRequest) => void): void;
+  setContent(html: string, options: PdfBrowserSetContentOptions): Promise<void>;
+  pdf(options: PdfBrowserPdfOptions): Promise<Buffer | Uint8Array>;
+  close(): Promise<void>;
+}
+
+export interface PdfBrowserRequest {
+  abort(): Promise<void>;
+}
+
+export interface PdfBrowserSetContentOptions {
+  readonly waitUntil: "load";
+  readonly timeout: number;
+}
+
+export interface PdfBrowserPdfOptions {
+  readonly format: "Letter";
+  readonly printBackground: true;
+  readonly preferCSSPageSize: true;
+  readonly timeout: number;
+}
+
 export interface PdfStorage {
   uploadPrivatePdf(input: PdfUploadInput): Promise<void>;
   createSignedDownload(input: PdfDownloadInput): Promise<PdfDownloadResponse>;
