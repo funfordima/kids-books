@@ -59,6 +59,15 @@ const makeSnapshot = (): PdfExportBookSnapshot => ({
   ]
 });
 
+const makeFirstPage = (): PdfExportBookSnapshot["pages"][number] => {
+  const firstPage = makeSnapshot().pages[0];
+  if (!firstPage) {
+    throw new Error("Expected test snapshot to include a first page.");
+  }
+
+  return firstPage;
+};
+
 const makeRecord = (
   overrides: Partial<PdfExportRecord> = {}
 ): PdfExportRecord => ({
@@ -244,7 +253,7 @@ describe("PdfExportService", () => {
   it("rejects inconsistent page ordering and incomplete page text", async () => {
     vi.mocked(repository.findReadyBookSnapshot).mockResolvedValueOnce({
       ...makeSnapshot(),
-      pages: [{ ...makeSnapshot().pages[0], pageNumber: 2 }]
+      pages: [{ ...makeFirstPage(), pageNumber: 2 }]
     });
     await expect(service.createExport(parent, bookId)).rejects.toThrow(
       UnprocessableEntityException
@@ -252,7 +261,7 @@ describe("PdfExportService", () => {
 
     vi.mocked(repository.findReadyBookSnapshot).mockResolvedValueOnce({
       ...makeSnapshot(),
-      pages: [{ ...makeSnapshot().pages[0], textContent: " " }]
+      pages: [{ ...makeFirstPage(), textContent: " " }]
     });
     await expect(service.createExport(parent, bookId)).rejects.toThrow(
       UnprocessableEntityException
@@ -336,7 +345,7 @@ describe("PdfExportService", () => {
       ...makeSnapshot(),
       pages: [
         {
-          ...makeSnapshot().pages[0],
+          ...makeFirstPage(),
           image: {
             bucket: "private",
             key: "users/other/books/other/pages/1.png",

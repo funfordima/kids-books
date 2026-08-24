@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "../generated/prisma/client";
-import type { PdfExportStatus } from "../generated/prisma/enums";
 import type { AuthenticatedParentContext } from "../auth/authenticated-parent";
 import type { PrismaService } from "../database/prisma.service";
 import type {
@@ -8,9 +7,37 @@ import type {
   ClaimPdfExportResult,
   MarkPdfExportReadyInput,
   PdfExportBookSnapshot,
+  PdfExportStatus,
   PdfExportRecord,
   PdfExportRepository
 } from "./pdf-export.interfaces";
+
+interface PdfExportPrismaRecord {
+  readonly id: string;
+  readonly userId: string;
+  readonly bookId: string;
+  readonly contentVersion: string;
+  readonly layoutVersion: string;
+  readonly status: PdfExportStatus;
+  readonly storageBucket: string | null;
+  readonly storageKey: string | null;
+  readonly sha256: string | null;
+  readonly byteSize: number | null;
+  readonly contentType: string | null;
+  readonly contentDisposition: string | null;
+}
+
+interface PdfExportDelegate {
+  findUnique(input: unknown): Promise<PdfExportPrismaRecord | null>;
+  findUniqueOrThrow(input: unknown): Promise<PdfExportPrismaRecord>;
+  create(input: unknown): Promise<PdfExportPrismaRecord>;
+  update(input: unknown): Promise<PdfExportPrismaRecord>;
+  findFirst(input: unknown): Promise<PdfExportPrismaRecord | null>;
+}
+
+interface PdfExportPrismaService extends PrismaService {
+  readonly pdfExport: PdfExportDelegate;
+}
 
 @Injectable()
 export class PrismaPdfExportRepository implements PdfExportRepository {
@@ -88,7 +115,7 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
     contentVersion: string,
     layoutVersion: string
   ): Promise<PdfExportRecord | null> {
-    const record = await this.prisma.pdfExport.findUnique({
+    const record = await this.pdfExport.findUnique({
       where: {
         bookId_contentVersion_layoutVersion: {
           bookId,
@@ -105,7 +132,7 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
     input: ClaimPdfExportInput
   ): Promise<ClaimPdfExportResult> {
     try {
-      const record = await this.prisma.pdfExport.create({
+      const record = await this.pdfExport.create({
         data: {
           userId: input.userId,
           bookId: input.bookId,
@@ -122,7 +149,7 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
       }
     }
 
-    const existing = await this.prisma.pdfExport.findUniqueOrThrow({
+    const existing = await this.pdfExport.findUniqueOrThrow({
       where: {
         bookId_contentVersion_layoutVersion: {
           bookId: input.bookId,
@@ -133,7 +160,7 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
     });
 
     if (existing.status === "FAILED") {
-      const retry = await this.prisma.pdfExport.update({
+      const retry = await this.pdfExport.update({
         where: { id: existing.id },
         data: {
           status: "PENDING",
@@ -169,7 +196,7 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
   public async markExportReady(
     input: MarkPdfExportReadyInput
   ): Promise<PdfExportRecord> {
-    const record = await this.prisma.pdfExport.update({
+    const record = await this.pdfExport.update({
       where: { id: input.exportId },
       data: {
         status: "READY",
@@ -188,7 +215,7 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
   }
 
   public async markExportFailed(exportId: string, errorCode: string): Promise<void> {
-    await this.prisma.pdfExport.update({
+    await this.pdfExport.update({
       where: { id: exportId },
       data: {
         status: "FAILED",
@@ -202,7 +229,7 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
     bookId: string,
     exportId: string
   ): Promise<PdfExportRecord | "not_found"> {
-    const record = await this.prisma.pdfExport.findFirst({
+    const record = await this.pdfExport.findFirst({
       where: {
         id: exportId,
         bookId,
@@ -213,21 +240,12 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
     return record ? this.toRecord(record) : "not_found";
   }
 
-  private toRecord(record: {
-    readonly id: string;
-    readonly userId: string;
-    readonly bookId: string;
-    readonly contentVersion: string;
-    readonly layoutVersion: string;
-    readonly status: PdfExportStatus;
-    readonly storageBucket: string | null;
-    readonly storageKey: string | null;
-    readonly sha256: string | null;
-    readonly byteSize: number | null;
-    readonly contentType: string | null;
-    readonly contentDisposition: string | null;
-  }): PdfExportRecord {
+  private toRecord(record: PdfExportPrismaRecord): PdfExportRecord {
     return record;
+  }
+
+  private get pdfExport(): PdfExportDelegate {
+    return (this.prisma as PdfExportPrismaService).pdfExport;
   }
 
   private toImageStatus(status: string): "READY" | "MISSING" | "FAILED" {
