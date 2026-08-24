@@ -24,6 +24,18 @@ export class PdfExportConfigService {
     return process.env.PDF_EXPORT_BUCKET ?? "kids-books-private";
   }
 
+  public getLocalStorageRoot(): string | null {
+    return process.env.PDF_EXPORT_LOCAL_STORAGE_DIR?.trim() || null;
+  }
+
+  public getDownloadBaseUrl(): string | null {
+    return process.env.PDF_EXPORT_DOWNLOAD_BASE_URL?.trim() || null;
+  }
+
+  public getDownloadSigningSecret(): string | null {
+    return process.env.PDF_EXPORT_DOWNLOAD_SIGNING_SECRET?.trim() || null;
+  }
+
   public getLimits(): PdfExportLimits {
     return {
       maxPages: readPositiveInt(process.env.PDF_EXPORT_MAX_PAGES, 16, 16),

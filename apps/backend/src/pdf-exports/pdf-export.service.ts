@@ -199,6 +199,7 @@ export class PdfExportService {
         continue;
       }
 
+      this.validateImageReference(snapshot, page.image.key);
       const image = await this.assetLoader.loadImage(page.image, limits);
       if (image === "fallback") {
         continue;
@@ -216,6 +217,23 @@ export class PdfExportService {
     }
 
     return loaded;
+  }
+
+  private validateImageReference(
+    snapshot: PdfExportBookSnapshot,
+    key: string
+  ): void {
+    const expectedPrefix = `users/${snapshot.userId}/books/${snapshot.bookId}/`;
+    if (
+      !key.startsWith(expectedPrefix) ||
+      key.includes("../") ||
+      key.includes("\\") ||
+      !/^[A-Za-z0-9._/-]+$/u.test(key)
+    ) {
+      throw new ServiceUnavailableException(
+        "PDF image reference validation failed."
+      );
+    }
   }
 
   private validateSnapshot(snapshot: PdfExportBookSnapshot): void {

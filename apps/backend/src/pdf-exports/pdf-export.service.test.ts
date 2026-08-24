@@ -330,4 +330,32 @@ describe("PdfExportService", () => {
       "pdf_export_failed"
     );
   });
+
+  it("rejects image references outside the owner and book storage prefix", async () => {
+    vi.mocked(repository.findReadyBookSnapshot).mockResolvedValueOnce({
+      ...makeSnapshot(),
+      pages: [
+        {
+          ...makeSnapshot().pages[0],
+          image: {
+            bucket: "private",
+            key: "users/other/books/other/pages/1.png",
+            altText: "wrong owner",
+            status: "READY"
+          }
+        }
+      ]
+    });
+
+    await expect(service.createExport(parent, bookId)).rejects.toThrow(
+      ServiceUnavailableException
+    );
+
+    expect(assetLoader.loadImage).not.toHaveBeenCalled();
+    expect(renderer.render).not.toHaveBeenCalled();
+    expect(repository.markExportFailed).toHaveBeenCalledWith(
+      exportId,
+      "pdf_export_failed"
+    );
+  });
 });
