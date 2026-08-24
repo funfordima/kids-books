@@ -183,6 +183,15 @@ Required role subtask sections:
 
 Agents must use non-interactive GitHub access.
 
+Repository-local access rule:
+
+- First resolve the repository-approved GitHub CLI binary from `.tools\bin\gh.exe`; do not rely on `gh` being available on `PATH`.
+- If the active worktree does not contain `.tools`, check the sibling canonical worktree path `..\kids-books\.tools\bin\gh.exe` before declaring GitHub access unavailable.
+- Use this resolved `$gh` binary for all GitHub issue, PR, Project v2, and Wiki operations during orchestration.
+- The GitHub connector can be used for read-only convenience, but connector `403 Resource not accessible by integration`, missing PATH `gh`, or browser runtime failure is not a blocker until the repository-local `$gh` preflight below has also failed.
+- Never extract, print, cat, or inspect credential-helper secrets, `hosts.yml`, tokens, or environment secrets. The only allowed auth checks are `$gh auth status` and low-risk GitHub read/write dry-run commands that do not reveal credentials.
+- Previous-session recovery evidence: `.tmp/gh-auth.err` showed the repo-local `gh` completed device authentication as `funfordima`; the durable working access path is the repo-local CLI, not the ChatGPT GitHub connector.
+
 Recommended setup:
 
 - Use a dedicated GitHub token for the agent system.
@@ -200,18 +209,24 @@ Agents must not:
 - Run `gh auth logout` unless explicitly instructed.
 - Print tokens, `hosts.yml`, or environment secrets.
 - Rely on browser/device OAuth for routine board or PR operations.
+- Treat GitHub connector write denial as final while `.tools\bin\gh.exe` is available and authenticated.
+- Attempt credential-helper token extraction or API-token workarounds when `gh` is already the approved access surface.
 
 Before orchestration starts, run:
 
 ```powershell
-$gh = ".\.tools\bin\gh.exe"
-if (-not (Test-Path $gh)) {
-  $gh = "..\kids-books\.tools\bin\gh.exe"
+$candidateGhPaths = @(
+  ".\.tools\bin\gh.exe",
+  "..\kids-books\.tools\bin\gh.exe"
+)
+$gh = $candidateGhPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $gh) {
+  throw "Repository-approved gh.exe not found. Check .tools or the sibling kids-books worktree."
 }
 & $gh auth status
-& $gh project list
+& $gh project list --owner funfordima --format json --limit 3
 & $gh issue list --repo funfordima/kids-books --limit 1
 & $gh project field-list 1 --owner funfordima --format json
 ```
 
-If these fail, stop and fix access before assigning implementation work.
+The expected account is `funfordima`; required scopes include `repo`, `project`, and `read:org`. If these fail, stop and fix access before assigning implementation work. Do not continue implementation while board/PR/comment operations are known to be blocked.
