@@ -138,6 +138,8 @@ model User {
   stripeEvents    StripeWebhookEvent[]
   templates       Template[]
   pdfExports      PdfExport[]
+  disabledTemplates Template[] @relation("TemplateDisabledBy")
+  publicationAudits TemplatePublicationAudit[]
 
   @@map("users")
 }
@@ -205,9 +207,17 @@ model Template {
   visibility            TemplateVisibility        @default(PRIVATE)
   publicationStatus     TemplatePublicationStatus @default(DRAFT) @map("publication_status")
   uniquenessFingerprint String?                   @unique @map("uniqueness_fingerprint")
+  pipelineVersion       String?                   @map("pipeline_version")
+  fingerprintVersion    String?                   @map("fingerprint_version")
+  semanticVersion       String?                   @map("semantic_version")
+  semanticModel         String?                   @map("semantic_model")
+  semanticAlgorithm     String?                   @map("semantic_algorithm")
+  semanticSignature     Json?                     @map("semantic_signature")
   generalizedConfig     Json                      @map("generalized_config")
   safetyReview          Json?                     @map("safety_review")
   publicationDecision   Json?                     @map("publication_decision")
+  disabledAt            DateTime?                 @map("disabled_at") @db.Timestamptz(6)
+  disabledByUserId      String?                   @map("disabled_by_user_id") @db.Uuid
   createdAt             DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -215,11 +225,48 @@ model Template {
   jobs       Job[]
   owner      User?  @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
   sourceBook Book?  @relation("TemplateSourceBook", fields: [sourceBookId], references: [id], onDelete: SetNull)
+  disabledBy User?  @relation("TemplateDisabledBy", fields: [disabledByUserId], references: [id], onDelete: SetNull)
+  publicationAudits TemplatePublicationAudit[]
 
   @@index([visibility, publicationStatus])
+  @@index([pipelineVersion, fingerprintVersion, semanticVersion])
   @@index([storyType, educationalSubtype])
   @@index([ownerUserId])
   @@map("templates")
+}
+
+model TemplatePublicationAudit {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceBookId         String?  @map("source_book_id") @db.Uuid
+  templateId           String?  @map("template_id") @db.Uuid
+  actorType            String   @map("actor_type")
+  actorId              String?  @map("actor_id") @db.Uuid
+  pipelineVersion      String   @map("pipeline_version")
+  fingerprintVersion   String   @map("fingerprint_version")
+  semanticVersion      String   @map("semantic_version")
+  moderationVersion    String   @map("moderation_version")
+  privacyPassed        Boolean  @map("privacy_passed")
+  moderationPassed     Boolean  @map("moderation_passed")
+  fingerprintCollision Boolean  @map("fingerprint_collision")
+  semanticCatalogReady Boolean  @map("semantic_catalog_ready")
+  semanticMaxScore     Float?   @map("semantic_max_score")
+  matchedTemplateIds   Json     @map("matched_template_ids")
+  outcome              String
+  reasonCode           String   @map("reason_code")
+  retryOfAuditId       String?  @map("retry_of_audit_id") @db.Uuid
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor        User?                       @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  sourceBook   Book?                       @relation(fields: [sourceBookId], references: [id], onDelete: SetNull)
+  template     Template?                   @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  retryOfAudit TemplatePublicationAudit?   @relation("TemplatePublicationRetry", fields: [retryOfAuditId], references: [id], onDelete: SetNull)
+  retries      TemplatePublicationAudit[]  @relation("TemplatePublicationRetry")
+
+  @@unique([sourceBookId, pipelineVersion])
+  @@index([sourceBookId, pipelineVersion])
+  @@index([templateId])
+  @@index([outcome, reasonCode])
+  @@map("template_publication_audits")
 }
 
 model Book {
@@ -244,6 +291,7 @@ model Book {
   template       Template?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
   user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   pdfExports     PdfExport[]
+  publicationAudits TemplatePublicationAudit[]
 
   @@index([userId, status])
   @@index([templateId])
