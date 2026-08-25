@@ -248,13 +248,14 @@ export class PdfExportService {
   ): Promise<() => void> {
     const maxConcurrentRenders = Math.max(1, limits.maxConcurrentRenders);
 
-    if (activeRenders >= maxConcurrentRenders) {
+    if (activeRenders < maxConcurrentRenders) {
+      activeRenders += 1;
+    } else {
       await new Promise<void>((resolve) => {
         renderWaiters.push(resolve);
       });
     }
 
-    activeRenders += 1;
     let released = false;
 
     return () => {
@@ -263,8 +264,13 @@ export class PdfExportService {
       }
 
       released = true;
+      const next = renderWaiters.shift();
+      if (next) {
+        next();
+        return;
+      }
+
       activeRenders -= 1;
-      renderWaiters.shift()?.();
     };
   }
 

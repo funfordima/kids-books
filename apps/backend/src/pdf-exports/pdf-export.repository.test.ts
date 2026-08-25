@@ -34,8 +34,11 @@ describe("PrismaPdfExportRepository", () => {
     });
     const pdfExport = {
       create: vi.fn().mockRejectedValue(makeUniqueError()),
-      findUniqueOrThrow: vi.fn().mockResolvedValue(stale),
-      update: vi.fn().mockResolvedValue(retry)
+      findUniqueOrThrow: vi
+        .fn()
+        .mockResolvedValueOnce(stale)
+        .mockResolvedValueOnce(retry),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 })
     };
     const repository = new PrismaPdfExportRepository({
       pdfExport
@@ -54,14 +57,22 @@ describe("PrismaPdfExportRepository", () => {
       shouldRender: true
     });
 
-    const updateInput = pdfExport.update.mock.calls[0]?.[0] as
+    const updateInput = pdfExport.updateMany.mock.calls[0]?.[0] as
       | {
-          readonly where?: { readonly id?: unknown };
+          readonly where?: {
+            readonly id?: unknown;
+            readonly status?: unknown;
+            readonly updatedAt?: { readonly lte?: unknown };
+          };
           readonly data?: Record<string, unknown>;
         }
       | undefined;
 
     expect(updateInput?.where?.id).toBe(stale.id);
+    expect(updateInput?.where?.status).toBe("PENDING");
+    expect(updateInput?.where?.updatedAt?.lte).toEqual(
+      new Date("2026-08-24T00:15:00.000Z")
+    );
     expect(updateInput?.data).toMatchObject({
       status: "PENDING",
       storageBucket: null,
@@ -77,7 +88,8 @@ describe("PrismaPdfExportRepository", () => {
     const pdfExport = {
       create: vi.fn().mockRejectedValue(makeUniqueError()),
       findUniqueOrThrow: vi.fn().mockResolvedValue(fresh),
-      update: vi.fn()
+      update: vi.fn(),
+      updateMany: vi.fn()
     };
     const repository = new PrismaPdfExportRepository({
       pdfExport
@@ -93,6 +105,35 @@ describe("PrismaPdfExportRepository", () => {
       })
     ).resolves.toEqual({
       record: fresh,
+      shouldRender: false
+    });
+
+    expect(pdfExport.update).not.toHaveBeenCalled();
+    expect(pdfExport.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("does not reset stale pending export records that are claimed by another worker", async () => {
+    const stale = makePrismaRecord();
+    const pdfExport = {
+      create: vi.fn().mockRejectedValue(makeUniqueError()),
+      findUniqueOrThrow: vi.fn().mockResolvedValue(stale),
+      update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 })
+    };
+    const repository = new PrismaPdfExportRepository({
+      pdfExport
+    } as unknown as PrismaService);
+
+    await expect(
+      repository.claimExport({
+        userId: String(stale.userId),
+        bookId: String(stale.bookId),
+        contentVersion: String(stale.contentVersion),
+        layoutVersion: String(stale.layoutVersion),
+        stalePendingBefore: new Date("2026-08-24T00:15:00.000Z")
+      })
+    ).resolves.toEqual({
+      record: stale,
       shouldRender: false
     });
 
