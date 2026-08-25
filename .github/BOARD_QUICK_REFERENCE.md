@@ -87,6 +87,10 @@ Routine agent work must use non-interactive GitHub access through a dedicated to
 
 Agents must not run browser/device OAuth login during normal workflow.
 
+For the current public `funfordima/kids-books` repository, a classic PAT with `public_repo`, `project`, and `read:org` is sufficient for routine board, issue, PR, and branch work. If the repository becomes private, replace `public_repo` with full `repo`.
+
+For local development, `GH_TOKEN` may be loaded from the ignored repository root `.env` file into the current process only. Never print, commit, copy, or expose `.env` contents.
+
 ## Product Refinement Rule
 
 Stories must not be created from `docs/SDLC_PLAN.md` alone. ProjectManager must also use feature refinement and current product context. If the product behavior is unclear, create/update a refinement issue instead of creating Developer work.

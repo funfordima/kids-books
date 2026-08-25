@@ -201,7 +201,10 @@ Recommended setup:
   - issues read/write
   - pull requests read/write
   - Projects read/write
-  - classic PAT scopes: `repo`, `project`, `read:org`
+  - classic PAT scopes for a public repository: `public_repo`, `project`, `read:org`
+  - classic PAT scopes for a private repository: `repo`, `project`, `read:org`
+
+For local development, agents may load `GH_TOKEN` from the repository root `.env` file only into the current process environment. Agents must never print, copy, commit, mount into broad containers, or expose `.env` contents. If `.env` is present, every Docker/container command must avoid mounting the repository root unless the command explicitly excludes secret files.
 
 Agents must not:
 
@@ -229,4 +232,4 @@ if (-not $gh) {
 & $gh project field-list 1 --owner funfordima --format json
 ```
 
-The expected account is `funfordima`; required scopes include `repo`, `project`, and `read:org`. If these fail, stop and fix access before assigning implementation work. Do not continue implementation while board/PR/comment operations are known to be blocked.
+The expected account is `funfordima`; required classic PAT scopes include `public_repo`, `project`, and `read:org` for the current public repository, or `repo`, `project`, and `read:org` if the repository becomes private. If these fail, stop and fix access before assigning implementation work. Do not continue implementation while board/PR/comment operations are known to be blocked.

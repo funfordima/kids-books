@@ -23,6 +23,13 @@ const stripeMigration = readFileSync(
   ),
   "utf8"
 );
+const pdfExportMigration = readFileSync(
+  join(
+    __dirname,
+    "../../prisma/migrations/20260824120000_pdf_exports/migration.sql"
+  ),
+  "utf8"
+);
 
 describe("Step 4 Prisma schema", () => {
   it("models all core SDLC entities", () => {
@@ -35,7 +42,8 @@ describe("Step 4 Prisma schema", () => {
       "Picture",
       "Job",
       "Rating",
-      "ReferralProgram"
+      "ReferralProgram",
+      "PdfExport"
     ]) {
       expect(schema).toContain(`model ${model} {`);
     }
@@ -118,5 +126,24 @@ describe("Step 4 Prisma schema", () => {
     );
     expect(stripeMigration).not.toContain("payload");
     expect(stripeMigration).not.toContain("signature");
+  });
+
+  it("records private deterministic PDF export metadata without binary storage", () => {
+    expect(schema).toContain("enum PdfExportStatus");
+    expect(schema).toContain("model PdfExport {");
+    expect(schema).toContain("contentVersion");
+    expect(schema).toContain("@@unique([bookId, contentVersion, layoutVersion])");
+    expect(schema).toContain("pdfExports");
+    expect(schema).not.toContain("pdfBytes");
+    expect(schema).not.toContain("publicUrl");
+
+    expect(pdfExportMigration).toContain(
+      "CREATE TYPE \"pdf_export_status\" AS ENUM ('PENDING', 'READY', 'FAILED');"
+    );
+    expect(pdfExportMigration).toContain(
+      "CREATE UNIQUE INDEX \"pdf_exports_book_id_content_version_layout_version_key\" ON \"pdf_exports\"(\"book_id\", \"content_version\", \"layout_version\");"
+    );
+    expect(pdfExportMigration).not.toContain("BYTEA");
+    expect(pdfExportMigration).not.toContain("public_url");
   });
 });
