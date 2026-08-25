@@ -129,7 +129,6 @@ export class PrismaTemplatePublicationRepository
           ownerUserId: input.sourceBook.userId,
           sourceBookId: input.sourceBook.id,
           title: input.candidate.title,
-          slug: uniqueSlug(input.candidate.title, input.sourceBook.id),
           description: input.candidate.description,
           ageMin: input.candidate.ageMin,
           ageMax: input.candidate.ageMax,
@@ -180,15 +179,38 @@ export class PrismaTemplatePublicationRepository
   public async recordDecision(
     input: TemplatePublicationAuditInput
   ): Promise<TemplatePublicationResult> {
-    const audit = await this.client.templatePublicationAudit.create({
-      data: auditCreateInput(input)
-    });
+    return this.client.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(
+        "SELECT pg_advisory_xact_lock(hashtext('template-publication-v1'))"
+      );
 
-    return {
-      sourceBookId: input.sourceBookId ?? "",
-      templateId: input.templateId,
-      decision: auditDecision(audit)
-    };
+      if (input.sourceBookId) {
+        const existingAudit = await tx.templatePublicationAudit.findFirst({
+          where: {
+            sourceBookId: input.sourceBookId,
+            pipelineVersion: TEMPLATE_PUBLICATION_PIPELINE_VERSION
+          },
+          orderBy: { createdAt: "asc" }
+        });
+        if (existingAudit) {
+          return {
+            sourceBookId: input.sourceBookId,
+            templateId: existingAudit.templateId,
+            decision: auditDecision(existingAudit)
+          };
+        }
+      }
+
+      const audit = await tx.templatePublicationAudit.create({
+        data: auditCreateInput(input)
+      });
+
+      return {
+        sourceBookId: input.sourceBookId ?? "",
+        templateId: input.templateId,
+        decision: auditDecision(audit)
+      };
+    });
   }
 
   public async listPublicTemplates(): Promise<readonly PublicTemplateSummary[]> {
@@ -492,12 +514,4 @@ function stringArray(value: unknown): readonly string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
     : [];
-}
-
-function uniqueSlug(title: string, sourceBookId: string): string {
-  return `${title
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/gu, "-")
-    .replace(/^-|-$/gu, "")}-${sourceBookId.slice(0, 8)}`;
 }

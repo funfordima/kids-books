@@ -452,6 +452,25 @@ describe("PrismaTemplatePublicationRepository", () => {
     expect(result.templateId).toBeNull();
     expect(result.decision.outcome).toBe("REJECTED_DUPLICATE");
   });
+
+  it("reuses an existing source pipeline decision when recording under lock", async () => {
+    const prisma = prismaStub({
+      existingAudit: { templateId: "template-existing", ...acceptedDecision() }
+    });
+    const repository = new PrismaTemplatePublicationRepository(prisma);
+
+    await expect(
+      repository.recordDecision({
+        sourceBookId: "book-1",
+        templateId: null,
+        actor: { type: "system", id: null },
+        decision: acceptedDecision()
+      })
+    ).resolves.toMatchObject({
+      templateId: "template-existing",
+      decision: { outcome: "ACCEPTED" }
+    });
+  });
 });
 
 function serviceWith(
@@ -535,7 +554,12 @@ function acceptedDecision() {
   };
 }
 
-function prismaStub(options: { readonly transactionCatalogCollision?: boolean } = {}) {
+function prismaStub(options: {
+  readonly transactionCatalogCollision?: boolean;
+  readonly existingAudit?: ReturnType<typeof acceptedDecision> & {
+    readonly templateId: string | null;
+  };
+} = {}) {
   const templateRecord = {
     id: "template-1",
     title: "Public Template",
@@ -585,7 +609,7 @@ function prismaStub(options: { readonly transactionCatalogCollision?: boolean } 
       updateMany: vi.fn(() => Promise.resolve({ count: 1 }))
     },
     templatePublicationAudit: {
-      findFirst: vi.fn(() => Promise.resolve(null)),
+      findFirst: vi.fn(() => Promise.resolve(options.existingAudit ?? null)),
       create: vi.fn((input: unknown) =>
         Promise.resolve({
           ...auditRecord,
