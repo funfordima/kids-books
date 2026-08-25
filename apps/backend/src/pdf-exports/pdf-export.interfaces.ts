@@ -68,6 +68,7 @@ export interface ClaimPdfExportInput {
   readonly bookId: string;
   readonly contentVersion: string;
   readonly layoutVersion: string;
+  readonly stalePendingBefore: Date;
 }
 
 export interface ClaimPdfExportResult {
@@ -188,7 +189,12 @@ export interface PdfExportLimits {
   readonly maxPages: number;
   readonly maxImageBytes: number;
   readonly maxTotalImageBytes: number;
+  readonly maxImageWidth: number;
+  readonly maxImageHeight: number;
+  readonly maxImagePixels: number;
   readonly maxPdfBytes: number;
+  readonly maxConcurrentRenders: number;
+  readonly pendingExportStaleMs: number;
   readonly renderTimeoutMs: number;
   readonly signedUrlTtlSeconds: number;
 }

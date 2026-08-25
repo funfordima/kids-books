@@ -40,6 +40,16 @@ export class DeferredPdfAssetLoader implements PdfAssetLoader {
       return "fallback";
     }
 
+    const dimensions = this.readImageDimensions(bytes, mimeType);
+    if (
+      !dimensions ||
+      dimensions.width > limits.maxImageWidth ||
+      dimensions.height > limits.maxImageHeight ||
+      dimensions.width * dimensions.height > limits.maxImagePixels
+    ) {
+      throw new ServiceUnavailableException("PDF image dimensions exceeded limits.");
+    }
+
     return {
       mimeType,
       bytes,
@@ -82,6 +92,121 @@ export class DeferredPdfAssetLoader implements PdfAssetLoader {
     }
 
     return null;
+  }
+
+  private readImageDimensions(
+    bytes: Buffer,
+    mimeType: PdfLoadedImage["mimeType"]
+  ): { readonly width: number; readonly height: number } | null {
+    if (mimeType === "image/png") {
+      return this.readPngDimensions(bytes);
+    }
+
+    if (mimeType === "image/jpeg") {
+      return this.readJpegDimensions(bytes);
+    }
+
+    return this.readWebpDimensions(bytes);
+  }
+
+  private readPngDimensions(
+    bytes: Buffer
+  ): { readonly width: number; readonly height: number } | null {
+    if (
+      bytes.length < 24 ||
+      bytes.subarray(12, 16).toString("ascii") !== "IHDR"
+    ) {
+      return null;
+    }
+
+    const width = bytes.readUInt32BE(16);
+    const height = bytes.readUInt32BE(20);
+    return this.validDimensions(width, height) ? { width, height } : null;
+  }
+
+  private readJpegDimensions(
+    bytes: Buffer
+  ): { readonly width: number; readonly height: number } | null {
+    let offset = 2;
+
+    while (offset + 9 < bytes.length) {
+      if (bytes[offset] !== 0xff) {
+        return null;
+      }
+
+      const marker = bytes[offset + 1];
+      const length = bytes.readUInt16BE(offset + 2);
+      if (length < 2 || offset + 2 + length > bytes.length) {
+        return null;
+      }
+
+      if (this.isJpegStartOfFrame(marker)) {
+        const height = bytes.readUInt16BE(offset + 5);
+        const width = bytes.readUInt16BE(offset + 7);
+        return this.validDimensions(width, height) ? { width, height } : null;
+      }
+
+      offset += 2 + length;
+    }
+
+    return null;
+  }
+
+  private readWebpDimensions(
+    bytes: Buffer
+  ): { readonly width: number; readonly height: number } | null {
+    const chunk = bytes.subarray(12, 16).toString("ascii");
+
+    if (chunk === "VP8X" && bytes.length >= 30) {
+      const b24 = bytes[24] ?? 0;
+      const b25 = bytes[25] ?? 0;
+      const b26 = bytes[26] ?? 0;
+      const b27 = bytes[27] ?? 0;
+      const b28 = bytes[28] ?? 0;
+      const b29 = bytes[29] ?? 0;
+      const width =
+        1 +
+        b24 +
+        (b25 << 8) +
+        (b26 << 16);
+      const height =
+        1 +
+        b27 +
+        (b28 << 8) +
+        (b29 << 16);
+      return this.validDimensions(width, height) ? { width, height } : null;
+    }
+
+    if (chunk === "VP8 " && bytes.length >= 30) {
+      const width = bytes.readUInt16LE(26) & 0x3fff;
+      const height = bytes.readUInt16LE(28) & 0x3fff;
+      return this.validDimensions(width, height) ? { width, height } : null;
+    }
+
+    if (chunk === "VP8L" && bytes.length >= 25) {
+      const b0 = bytes[21] ?? 0;
+      const b1 = bytes[22] ?? 0;
+      const b2 = bytes[23] ?? 0;
+      const b3 = bytes[24] ?? 0;
+      const width = 1 + (((b1 & 0x3f) << 8) | b0);
+      const height = 1 + ((b3 << 6) | (b2 << 2) | ((b1 & 0xc0) >> 6));
+      return this.validDimensions(width, height) ? { width, height } : null;
+    }
+
+    return null;
+  }
+
+  private isJpegStartOfFrame(marker: number | undefined): boolean {
+    return (
+      marker !== undefined &&
+      marker >= 0xc0 &&
+      marker <= 0xcf &&
+      ![0xc4, 0xc8, 0xcc].includes(marker)
+    );
+  }
+
+  private validDimensions(width: number, height: number): boolean {
+    return width > 0 && height > 0;
   }
 
   private resolvePrivateObjectPath(

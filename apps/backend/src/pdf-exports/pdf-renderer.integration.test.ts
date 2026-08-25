@@ -16,7 +16,12 @@ const limits: PdfExportLimits = {
   maxPages: 16,
   maxImageBytes: 10 * 1024 * 1024,
   maxTotalImageBytes: 100 * 1024 * 1024,
+  maxImageWidth: 4096,
+  maxImageHeight: 4096,
+  maxImagePixels: 16_000_000,
   maxPdfBytes: 50 * 1024 * 1024,
+  maxConcurrentRenders: 2,
+  pendingExportStaleMs: 15 * 60 * 1000,
   renderTimeoutMs: 60_000,
   signedUrlTtlSeconds: 300
 };

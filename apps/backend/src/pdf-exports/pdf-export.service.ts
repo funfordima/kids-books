@@ -31,6 +31,8 @@ const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const hashPattern = /^[a-f0-9]{64}$/u;
 const inFlightExports = new Map<string, Promise<PdfExportRecord>>();
+const renderWaiters: Array<() => void> = [];
+let activeRenders = 0;
 
 @Injectable()
 export class PdfExportService {
@@ -129,11 +131,13 @@ export class PdfExportService {
     contentVersion: string,
     layoutVersion: string
   ): Promise<PdfExportRecord> {
+    const limits = this.config.getLimits();
     const claim = await this.repository.claimExport({
       userId: snapshot.userId,
       bookId: snapshot.bookId,
       contentVersion,
-      layoutVersion
+      layoutVersion,
+      stalePendingBefore: new Date(Date.now() - limits.pendingExportStaleMs)
     });
     const claimedRecord = claim.record;
 
@@ -145,7 +149,6 @@ export class PdfExportService {
       throw new ConflictException("PDF export is already in progress.");
     }
 
-    const limits = this.config.getLimits();
     const bucket = this.config.getStorageBucket();
     const key = this.buildStorageKey(
       snapshot.userId,
@@ -159,7 +162,7 @@ export class PdfExportService {
     try {
       const images = await this.loadImages(snapshot, limits);
       const html = buildPdfHtml(snapshot, images);
-      const pdf = await this.renderer.render({ snapshot, html, limits });
+      const pdf = await this.renderWithConcurrency({ snapshot, html, limits });
       const sha256 = this.hashBuffer(pdf);
 
       if (pdf.length === 0 || pdf.length > limits.maxPdfBytes) {
@@ -224,6 +227,45 @@ export class PdfExportService {
     }
 
     return loaded;
+  }
+
+  private async renderWithConcurrency(input: {
+    readonly snapshot: PdfExportBookSnapshot;
+    readonly html: string;
+    readonly limits: PdfExportLimits;
+  }): Promise<Buffer> {
+    const release = await this.acquireRenderSlot(input.limits);
+
+    try {
+      return await this.renderer.render(input);
+    } finally {
+      release();
+    }
+  }
+
+  private async acquireRenderSlot(
+    limits: PdfExportLimits
+  ): Promise<() => void> {
+    const maxConcurrentRenders = Math.max(1, limits.maxConcurrentRenders);
+
+    if (activeRenders >= maxConcurrentRenders) {
+      await new Promise<void>((resolve) => {
+        renderWaiters.push(resolve);
+      });
+    }
+
+    activeRenders += 1;
+    let released = false;
+
+    return () => {
+      if (released) {
+        return;
+      }
+
+      released = true;
+      activeRenders -= 1;
+      renderWaiters.shift()?.();
+    };
   }
 
   private validateImageReference(

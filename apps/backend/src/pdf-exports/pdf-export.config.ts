@@ -49,10 +49,35 @@ export class PdfExportConfigService {
         100 * 1024 * 1024,
         100 * 1024 * 1024
       ),
+      maxImageWidth: readPositiveInt(
+        process.env.PDF_EXPORT_MAX_IMAGE_WIDTH,
+        4096,
+        4096
+      ),
+      maxImageHeight: readPositiveInt(
+        process.env.PDF_EXPORT_MAX_IMAGE_HEIGHT,
+        4096,
+        4096
+      ),
+      maxImagePixels: readPositiveInt(
+        process.env.PDF_EXPORT_MAX_IMAGE_PIXELS,
+        16_000_000,
+        16_000_000
+      ),
       maxPdfBytes: readPositiveInt(
         process.env.PDF_EXPORT_MAX_PDF_BYTES,
         50 * 1024 * 1024,
         50 * 1024 * 1024
+      ),
+      maxConcurrentRenders: readPositiveInt(
+        process.env.PDF_EXPORT_MAX_CONCURRENT_RENDERS,
+        2,
+        8
+      ),
+      pendingExportStaleMs: readPositiveInt(
+        process.env.PDF_EXPORT_PENDING_STALE_MS,
+        15 * 60 * 1000,
+        60 * 60 * 1000
       ),
       renderTimeoutMs: readPositiveInt(
         process.env.PDF_EXPORT_RENDER_TIMEOUT_MS,

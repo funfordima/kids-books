@@ -25,6 +25,7 @@ interface PdfExportPrismaRecord {
   readonly byteSize: number | null;
   readonly contentType: string | null;
   readonly contentDisposition: string | null;
+  readonly updatedAt: Date;
 }
 
 interface PdfExportDelegate {
@@ -161,7 +162,11 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
       }
     });
 
-    if (existing.status === "FAILED") {
+    if (
+      existing.status === "FAILED" ||
+      (existing.status === "PENDING" &&
+        existing.updatedAt <= input.stalePendingBefore)
+    ) {
       const retry = await this.pdfExport.update({
         where: { id: existing.id },
         data: {

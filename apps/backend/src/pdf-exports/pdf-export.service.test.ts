@@ -29,9 +29,12 @@ const parent = {
 };
 const bookId = "22222222-2222-4222-8222-222222222222";
 const exportId = "33333333-3333-4333-8333-333333333333";
+const secondBookId = "44444444-4444-4444-8444-444444444444";
 
-const makeSnapshot = (): PdfExportBookSnapshot => ({
-  bookId,
+const makeSnapshot = (
+  overrides: Partial<PdfExportBookSnapshot> = {}
+): PdfExportBookSnapshot => ({
+  bookId: overrides.bookId ?? bookId,
   userId: parent.parentId,
   title: "Mia <Saves> The Moon",
   config: { ageGroup: "5-6", pageCount: 2 },
@@ -44,7 +47,7 @@ const makeSnapshot = (): PdfExportBookSnapshot => ({
       illustrationDescription: "A child looking at the moon",
       image: {
         bucket: "private",
-        key: `users/${parent.parentId}/books/${bookId}/pages/1.png`,
+        key: `users/${parent.parentId}/books/${overrides.bookId ?? bookId}/pages/1.png`,
         altText: "A child looking at the moon",
         status: "READY"
       }
@@ -56,7 +59,8 @@ const makeSnapshot = (): PdfExportBookSnapshot => ({
       illustrationDescription: "The moon above a friendly hill",
       image: null
     }
-  ]
+  ],
+  ...overrides
 });
 
 const makeFirstPage = (): PdfExportBookSnapshot["pages"][number] => {
@@ -110,6 +114,29 @@ const makeRepository = () =>
     markExportFailed: vi.fn().mockResolvedValue(undefined),
     findAuthorizedExport: vi.fn().mockResolvedValue(makeRecord())
   }) as unknown as PrismaPdfExportRepository;
+
+const withEnv = async <T>(
+  key: string,
+  value: string | undefined,
+  work: () => Promise<T>
+): Promise<T> => {
+  const previous = process.env[key];
+  if (value === undefined) {
+    delete process.env[key];
+  } else {
+    process.env[key] = value;
+  }
+
+  try {
+    return await work();
+  } finally {
+    if (previous === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = previous;
+    }
+  }
+};
 
 describe("PdfExportService", () => {
   let repository: PrismaPdfExportRepository;
@@ -205,6 +232,46 @@ describe("PdfExportService", () => {
 
     expect(renderer.render).not.toHaveBeenCalled();
     expect(storage.uploadPrivatePdf).not.toHaveBeenCalled();
+  });
+
+  it("passes a stale pending cutoff when claiming export work", async () => {
+    await service.createExport(parent, bookId);
+
+    const claimInput = vi.mocked(repository.claimExport).mock.calls[0]?.[0];
+    expect(claimInput?.stalePendingBefore).toBeInstanceOf(Date);
+  });
+
+  it("serializes distinct Chromium renders by configured concurrency", async () => {
+    await withEnv("PDF_EXPORT_MAX_CONCURRENT_RENDERS", "1", async () => {
+      let releaseFirstRender: (() => void) | undefined;
+      vi.mocked(repository.findReadyBookSnapshot)
+        .mockResolvedValueOnce(makeSnapshot())
+        .mockResolvedValueOnce(makeSnapshot({ bookId: secondBookId }));
+      vi.mocked(renderer.render)
+        .mockImplementationOnce(
+          () =>
+            new Promise<Buffer>((resolve) => {
+              releaseFirstRender = () => resolve(Buffer.from("%PDF-1.7\none"));
+            })
+        )
+        .mockResolvedValueOnce(Buffer.from("%PDF-1.7\ntwo"));
+
+      const first = service.createExport(parent, bookId);
+      await vi.waitFor(() => {
+        expect(renderer.render).toHaveBeenCalledTimes(1);
+      });
+
+      const second = service.createExport(parent, secondBookId);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(renderer.render).toHaveBeenCalledTimes(1);
+
+      releaseFirstRender?.();
+      await first;
+      await vi.waitFor(() => {
+        expect(renderer.render).toHaveBeenCalledTimes(2);
+      });
+      await second;
+    });
   });
 
   it("retries a previously failed export claim", async () => {
