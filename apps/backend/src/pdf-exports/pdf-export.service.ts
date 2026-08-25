@@ -6,7 +6,7 @@ import {
   ServiceUnavailableException,
   UnprocessableEntityException
 } from "@nestjs/common";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { AuthenticatedParentContext } from "../auth/authenticated-parent";
 import { BillingService } from "../billing/billing.service";
 import { validateNonEmptyIdentifier } from "../common/validation";
@@ -137,7 +137,8 @@ export class PdfExportService {
       bookId: snapshot.bookId,
       contentVersion,
       layoutVersion,
-      stalePendingBefore: new Date(Date.now() - limits.pendingExportStaleMs)
+      stalePendingBefore: new Date(Date.now() - limits.pendingExportStaleMs),
+      renderLease: randomUUID()
     });
     const claimedRecord = claim.record;
 
@@ -149,11 +150,17 @@ export class PdfExportService {
       throw new ConflictException("PDF export is already in progress.");
     }
 
+    const renderLease = claimedRecord.renderLease;
+    if (!renderLease || !uuidPattern.test(renderLease)) {
+      throw new ServiceUnavailableException("PDF export claim validation failed.");
+    }
+
     const bucket = this.config.getStorageBucket();
     const key = this.buildStorageKey(
       snapshot.userId,
       snapshot.bookId,
-      contentVersion
+      contentVersion,
+      renderLease
     );
     const contentDisposition = `attachment; filename="${sanitizePdfFilename(
       snapshot.title
@@ -178,8 +185,9 @@ export class PdfExportService {
         contentDisposition
       });
 
-      return await this.repository.markExportReady({
+      const ready = await this.repository.markExportReady({
         exportId: claimedRecord.id,
+        renderLease,
         storageBucket: bucket,
         storageKey: key,
         sha256,
@@ -187,12 +195,22 @@ export class PdfExportService {
         contentType: "application/pdf",
         contentDisposition
       });
+
+      if (!ready) {
+        await this.storage.deleteObject(bucket, key);
+        throw new ServiceUnavailableException("PDF export claim was replaced.");
+      }
+
+      return ready;
     } catch {
-      await this.storage.deleteObject(bucket, key);
-      await this.repository.markExportFailed(
-        claimedRecord.id,
-        "pdf_export_failed"
-      );
+      const stillOwned = await this.repository.markExportFailed({
+        exportId: claimedRecord.id,
+        renderLease,
+        errorCode: "pdf_export_failed"
+      });
+      if (stillOwned) {
+        await this.storage.deleteObject(bucket, key);
+      }
       throw new ServiceUnavailableException("PDF export failed.");
     }
   }
@@ -335,17 +353,20 @@ export class PdfExportService {
   private buildStorageKey(
     userId: string,
     bookId: string,
-    contentVersion: string
+    contentVersion: string,
+    renderLease: string | null
   ): string {
     if (
       !uuidPattern.test(userId) ||
       !uuidPattern.test(bookId) ||
-      !hashPattern.test(contentVersion)
+      !hashPattern.test(contentVersion) ||
+      !renderLease ||
+      !uuidPattern.test(renderLease)
     ) {
       throw new ServiceUnavailableException("PDF export key validation failed.");
     }
 
-    return `users/${userId}/books/${bookId}/pdf/${contentVersion}-${PDF_LAYOUT_VERSION}.pdf`;
+    return `users/${userId}/books/${bookId}/pdf/${contentVersion}-${PDF_LAYOUT_VERSION}-${renderLease}.pdf`;
   }
 
   private hashBuffer(buffer: Buffer): string {

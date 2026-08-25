@@ -35,6 +35,7 @@ export interface PdfExportRecord {
   readonly contentVersion: string;
   readonly layoutVersion: string;
   readonly status: PdfExportStatus;
+  readonly renderLease: string | null;
   readonly storageBucket: string | null;
   readonly storageKey: string | null;
   readonly sha256: string | null;
@@ -54,8 +55,8 @@ export interface PdfExportRepository {
     layoutVersion: string
   ): Promise<PdfExportRecord | null>;
   claimExport(input: ClaimPdfExportInput): Promise<ClaimPdfExportResult>;
-  markExportReady(input: MarkPdfExportReadyInput): Promise<PdfExportRecord>;
-  markExportFailed(exportId: string, errorCode: string): Promise<void>;
+  markExportReady(input: MarkPdfExportReadyInput): Promise<PdfExportRecord | null>;
+  markExportFailed(input: MarkPdfExportFailedInput): Promise<boolean>;
   findAuthorizedExport(
     parent: AuthenticatedParentContext,
     bookId: string,
@@ -69,6 +70,7 @@ export interface ClaimPdfExportInput {
   readonly contentVersion: string;
   readonly layoutVersion: string;
   readonly stalePendingBefore: Date;
+  readonly renderLease: string;
 }
 
 export interface ClaimPdfExportResult {
@@ -78,12 +80,19 @@ export interface ClaimPdfExportResult {
 
 export interface MarkPdfExportReadyInput {
   readonly exportId: string;
+  readonly renderLease: string;
   readonly storageBucket: string;
   readonly storageKey: string;
   readonly sha256: string;
   readonly byteSize: number;
   readonly contentType: "application/pdf";
   readonly contentDisposition: string;
+}
+
+export interface MarkPdfExportFailedInput {
+  readonly exportId: string;
+  readonly renderLease: string;
+  readonly errorCode: string;
 }
 
 export interface PdfAssetLoader {

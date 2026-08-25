@@ -5,6 +5,7 @@ ARG CHROMIUM_PACKAGE_VERSION=151.0.7922.173-1~deb12u1
 ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PDF_EXPORT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+ENV HOME=/home/node
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
@@ -29,6 +30,9 @@ COPY apps/backend ./apps/backend
 
 RUN npm run build -w @kids-books/shared \
   && npm run build -w @kids-books/backend \
-  && npm prune --omit=dev
+  && npm prune --omit=dev \
+  && chown -R node:node /app /home/node
+
+USER node
 
 CMD ["node", "apps/backend/dist/main.js"]

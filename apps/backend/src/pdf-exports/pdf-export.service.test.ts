@@ -29,7 +29,10 @@ const parent = {
 };
 const bookId = "22222222-2222-4222-8222-222222222222";
 const exportId = "33333333-3333-4333-8333-333333333333";
+const renderLease = "44444444-4444-4444-8444-444444444444";
 const secondBookId = "44444444-4444-4444-8444-444444444444";
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 const makeSnapshot = (
   overrides: Partial<PdfExportBookSnapshot> = {}
@@ -81,6 +84,7 @@ const makeRecord = (
   contentVersion: "a".repeat(64),
   layoutVersion: PDF_LAYOUT_VERSION,
   status: "READY",
+  renderLease: null,
   storageBucket: "kids-books-private",
   storageKey: `users/${parent.parentId}/books/${bookId}/pdf/${"a".repeat(
     64
@@ -97,12 +101,13 @@ const makeRepository = () =>
     findReadyBookSnapshot: vi.fn().mockResolvedValue(makeSnapshot()),
     findReusableExport: vi.fn().mockResolvedValue(null),
     claimExport: vi.fn().mockResolvedValue({
-      record: makeRecord({ status: "PENDING" }),
+      record: makeRecord({ status: "PENDING", renderLease }),
       shouldRender: true
     }),
     markExportReady: vi.fn().mockImplementation((input: MarkPdfExportReadyInput) =>
       Promise.resolve(
         makeRecord({
+          renderLease: null,
           storageBucket: input.storageBucket,
           storageKey: input.storageKey,
           sha256: input.sha256,
@@ -111,7 +116,7 @@ const makeRepository = () =>
         })
       )
     ),
-    markExportFailed: vi.fn().mockResolvedValue(undefined),
+    markExportFailed: vi.fn().mockResolvedValue(true),
     findAuthorizedExport: vi.fn().mockResolvedValue(makeRecord())
   }) as unknown as PrismaPdfExportRepository;
 
@@ -239,6 +244,7 @@ describe("PdfExportService", () => {
 
     const claimInput = vi.mocked(repository.claimExport).mock.calls[0]?.[0];
     expect(claimInput?.stalePendingBefore).toBeInstanceOf(Date);
+    expect(claimInput?.renderLease).toMatch(uuidPattern);
   });
 
   it("serializes distinct Chromium renders by configured concurrency", async () => {
@@ -276,7 +282,7 @@ describe("PdfExportService", () => {
 
   it("retries a previously failed export claim", async () => {
     vi.mocked(repository.claimExport).mockResolvedValueOnce({
-      record: makeRecord({ status: "PENDING", storageBucket: null }),
+      record: makeRecord({ status: "PENDING", renderLease, storageBucket: null }),
       shouldRender: true
     });
 
@@ -289,6 +295,41 @@ describe("PdfExportService", () => {
 
     expect(renderer.render).toHaveBeenCalledOnce();
     expect(storage.uploadPrivatePdf).toHaveBeenCalledOnce();
+  });
+
+  it("deletes only its lease-specific object when ready transition loses the claim", async () => {
+    vi.mocked(repository.markExportReady).mockResolvedValueOnce(null);
+    vi.mocked(repository.markExportFailed).mockResolvedValueOnce(false);
+
+    await expect(service.createExport(parent, bookId)).rejects.toThrow(
+      ServiceUnavailableException
+    );
+
+    const uploadInput = vi.mocked(storage.uploadPrivatePdf).mock.calls[0]?.[0];
+    expect(uploadInput?.key).toContain(`-${renderLease}.pdf`);
+    expect(storage.deleteObject).toHaveBeenCalledWith(
+      "kids-books-private",
+      uploadInput?.key
+    );
+    expect(storage.deleteObject).toHaveBeenCalledOnce();
+  });
+
+  it("does not delete another worker's object when failed transition loses the claim", async () => {
+    vi.mocked(renderer.render).mockRejectedValueOnce(
+      new ServiceUnavailableException("renderer unavailable")
+    );
+    vi.mocked(repository.markExportFailed).mockResolvedValueOnce(false);
+
+    await expect(service.createExport(parent, bookId)).rejects.toThrow(
+      ServiceUnavailableException
+    );
+
+    expect(repository.markExportFailed).toHaveBeenCalledWith({
+      exportId,
+      renderLease,
+      errorCode: "pdf_export_failed"
+    });
+    expect(storage.deleteObject).not.toHaveBeenCalled();
   });
 
   it("renders escaped deterministic HTML with fallback images and private metadata", async () => {
@@ -306,7 +347,7 @@ describe("PdfExportService", () => {
     const uploadInput = uploadCall?.[0];
     expect(uploadInput?.bucket).toBe("kids-books-private");
     expect(uploadInput?.key).toMatch(
-      /^users\/11111111-1111-4111-8111-111111111111\/books\/22222222-2222-4222-8222-222222222222\/pdf\/[a-f0-9]{64}-pdf-layout-v1\.pdf$/u
+      /^users\/11111111-1111-4111-8111-111111111111\/books\/22222222-2222-4222-8222-222222222222\/pdf\/[a-f0-9]{64}-pdf-layout-v1-[0-9a-f-]{36}\.pdf$/u
     );
     expect(uploadInput?.contentType).toBe("application/pdf");
     expect(uploadInput?.contentDisposition).toBe(
@@ -345,10 +386,11 @@ describe("PdfExportService", () => {
       "kids-books-private",
       expect.stringContaining(`/books/${bookId}/pdf/`)
     );
-    expect(repository.markExportFailed).toHaveBeenCalledWith(
+    expect(repository.markExportFailed).toHaveBeenCalledWith({
       exportId,
-      "pdf_export_failed"
-    );
+      renderLease,
+      errorCode: "pdf_export_failed"
+    });
   });
 
   it("reauthorizes downloads and returns short-lived signed URLs only for ready records", async () => {
@@ -398,10 +440,11 @@ describe("PdfExportService", () => {
       ServiceUnavailableException
     );
     expect(renderer.render).not.toHaveBeenCalled();
-    expect(repository.markExportFailed).toHaveBeenCalledWith(
+    expect(repository.markExportFailed).toHaveBeenCalledWith({
       exportId,
-      "pdf_export_failed"
-    );
+      renderLease,
+      errorCode: "pdf_export_failed"
+    });
   });
 
   it("rejects image references outside the owner and book storage prefix", async () => {
@@ -426,9 +469,10 @@ describe("PdfExportService", () => {
 
     expect(assetLoader.loadImage).not.toHaveBeenCalled();
     expect(renderer.render).not.toHaveBeenCalled();
-    expect(repository.markExportFailed).toHaveBeenCalledWith(
+    expect(repository.markExportFailed).toHaveBeenCalledWith({
       exportId,
-      "pdf_export_failed"
-    );
+      renderLease,
+      errorCode: "pdf_export_failed"
+    });
   });
 });

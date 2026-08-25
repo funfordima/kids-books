@@ -257,6 +257,7 @@ model PdfExport {
   contentVersion     String          @map("content_version")
   layoutVersion      String          @map("layout_version")
   status             PdfExportStatus @default(PENDING)
+  renderLease        String?         @map("render_lease") @db.Uuid
   storageBucket      String?         @map("storage_bucket")
   storageKey         String?         @map("storage_key")
   sha256             String?

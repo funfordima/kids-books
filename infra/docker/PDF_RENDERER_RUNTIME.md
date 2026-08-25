@@ -12,6 +12,7 @@ Pinned values:
 - Debian Chromium package: `151.0.7922.173-1~deb12u1`
 - Puppeteer npm package: `25.8.0`
 - Chromium executable path: `/usr/bin/chromium`
+- Runtime user: unprivileged `node`
 
 Build from the repository root:
 
@@ -24,11 +25,12 @@ coverage, and dependency folders from the build context. Do not pass secrets as
 build arguments. Runtime secrets must be injected only at container start by the
 deployment platform.
 
-For local root-run verification containers only, set:
+The runtime image runs the backend as the unprivileged `node` user so Chromium
+can keep sandboxing enabled by default. For one-off local root-run verification
+containers only, set:
 
 ```powershell
 PDF_EXPORT_CHROMIUM_NO_SANDBOX=true
 ```
 
-Do not enable no-sandbox mode by default in production deployment. Prefer a
-non-root runtime user and the Chromium sandbox whenever the host supports it.
+Do not enable no-sandbox mode by default in production deployment.

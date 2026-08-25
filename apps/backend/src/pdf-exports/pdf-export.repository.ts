@@ -6,6 +6,7 @@ import type {
   ClaimPdfExportInput,
   ClaimPdfExportResult,
   MarkPdfExportReadyInput,
+  MarkPdfExportFailedInput,
   PdfExportBookSnapshot,
   PdfExportStatus,
   PdfExportRecord,
@@ -19,6 +20,7 @@ interface PdfExportPrismaRecord {
   readonly contentVersion: string;
   readonly layoutVersion: string;
   readonly status: PdfExportStatus;
+  readonly renderLease: string | null;
   readonly storageBucket: string | null;
   readonly storageKey: string | null;
   readonly sha256: string | null;
@@ -142,6 +144,7 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
           bookId: input.bookId,
           contentVersion: input.contentVersion,
           layoutVersion: input.layoutVersion,
+          renderLease: input.renderLease,
           status: "PENDING"
         }
       });
@@ -164,10 +167,14 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
     });
 
     if (existing.status === "FAILED") {
-      const retry = await this.pdfExport.update({
-        where: { id: existing.id },
+      const result = await this.pdfExport.updateMany({
+        where: {
+          id: existing.id,
+          status: "FAILED"
+        },
         data: {
           status: "PENDING",
+          renderLease: input.renderLease,
           errorCode: null,
           storageBucket: null,
           storageKey: null,
@@ -179,7 +186,15 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
         }
       });
 
-      return { record: this.toRecord(retry), shouldRender: true };
+      if (result.count > 0) {
+        const retry = await this.pdfExport.findUniqueOrThrow({
+          where: { id: existing.id }
+        });
+
+        return { record: this.toRecord(retry), shouldRender: true };
+      }
+
+      return { record: this.toRecord(existing), shouldRender: false };
     }
 
     if (
@@ -194,6 +209,7 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
         },
         data: {
           status: "PENDING",
+          renderLease: input.renderLease,
           errorCode: null,
           storageBucket: null,
           storageKey: null,
@@ -231,11 +247,16 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
 
   public async markExportReady(
     input: MarkPdfExportReadyInput
-  ): Promise<PdfExportRecord> {
-    const record = await this.pdfExport.update({
-      where: { id: input.exportId },
+  ): Promise<PdfExportRecord | null> {
+    const result = await this.pdfExport.updateMany({
+      where: {
+        id: input.exportId,
+        status: "PENDING",
+        renderLease: input.renderLease
+      },
       data: {
         status: "READY",
+        renderLease: null,
         storageBucket: input.storageBucket,
         storageKey: input.storageKey,
         sha256: input.sha256,
@@ -247,17 +268,34 @@ export class PrismaPdfExportRepository implements PdfExportRepository {
       }
     });
 
+    if (result.count === 0) {
+      return null;
+    }
+
+    const record = await this.pdfExport.findUniqueOrThrow({
+      where: { id: input.exportId }
+    });
+
     return this.toRecord(record);
   }
 
-  public async markExportFailed(exportId: string, errorCode: string): Promise<void> {
-    await this.pdfExport.update({
-      where: { id: exportId },
+  public async markExportFailed(
+    input: MarkPdfExportFailedInput
+  ): Promise<boolean> {
+    const result = await this.pdfExport.updateMany({
+      where: {
+        id: input.exportId,
+        status: "PENDING",
+        renderLease: input.renderLease
+      },
       data: {
         status: "FAILED",
-        errorCode
+        renderLease: null,
+        errorCode: input.errorCode
       }
     });
+
+    return result.count > 0;
   }
 
   public async findAuthorizedExport(
