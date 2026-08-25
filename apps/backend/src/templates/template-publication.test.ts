@@ -368,7 +368,7 @@ describe("TemplatesService publication workflow", () => {
 
 describe("PrismaTemplatePublicationRepository", () => {
   it("maps ready books, active catalog signatures, and public summaries", async () => {
-    const prisma = prismaStub();
+    const prisma = prismaStub({ transactionCatalogCollision: true });
     const repository = new PrismaTemplatePublicationRepository(prisma);
 
     await expect(repository.loadReadySourceBook("book-1")).resolves.toMatchObject({
@@ -429,6 +429,28 @@ describe("PrismaTemplatePublicationRepository", () => {
         decision
       })
     ).resolves.toMatchObject({ sourceBookId: "book-1", templateId: null });
+  });
+
+  it("rechecks the catalog under an advisory transaction lock before creating", async () => {
+    const prisma = prismaStub({ transactionCatalogCollision: true });
+    const repository = new PrismaTemplatePublicationRepository(prisma);
+
+    const result = await repository.acceptPublication({
+      sourceBook,
+      candidate,
+      fingerprint: "fingerprint",
+      signature: {
+        version: TEMPLATE_SEMANTIC_VERSION,
+        model: "mock",
+        algorithm: TEMPLATE_SEMANTIC_ALGORITHM,
+        vector: [1, 0]
+      },
+      decision: acceptedDecision(),
+      actor: { type: "system", id: null }
+    });
+
+    expect(result.templateId).toBeNull();
+    expect(result.decision.outcome).toBe("REJECTED_DUPLICATE");
   });
 });
 
@@ -513,7 +535,7 @@ function acceptedDecision() {
   };
 }
 
-function prismaStub() {
+function prismaStub(options: { readonly transactionCatalogCollision?: boolean } = {}) {
   const templateRecord = {
     id: "template-1",
     title: "Public Template",
@@ -552,14 +574,26 @@ function prismaStub() {
       create: vi.fn(() =>
         Promise.resolve({ ...templateRecord, id: "template-created" })
       ),
-      findMany: vi.fn(() => Promise.resolve([templateRecord])),
+      findMany: vi.fn((input: unknown) =>
+        Promise.resolve(
+          isCatalogQuery(input) && !options.transactionCatalogCollision
+            ? []
+            : [templateRecord]
+        )
+      ),
       findFirst: vi.fn(() => Promise.resolve(templateRecord)),
       updateMany: vi.fn(() => Promise.resolve({ count: 1 }))
     },
     templatePublicationAudit: {
-      findFirst: vi.fn(() => Promise.resolve(auditRecord)),
-      create: vi.fn(() => Promise.resolve(auditRecord))
+      findFirst: vi.fn(() => Promise.resolve(null)),
+      create: vi.fn((input: unknown) =>
+        Promise.resolve({
+          ...auditRecord,
+          ...recordData(input)
+        })
+      )
     },
+    $executeRawUnsafe: vi.fn(() => Promise.resolve(1)),
     $transaction: vi.fn(
       (callback: (transactionClient: typeof client) => Promise<unknown>) =>
         callback(client)
@@ -567,4 +601,19 @@ function prismaStub() {
   };
 
   return client as never;
+}
+
+function isCatalogQuery(input: unknown): boolean {
+  return (
+    typeof input === "object" &&
+    input !== null &&
+    "select" in input &&
+    !("orderBy" in input)
+  );
+}
+
+function recordData(input: unknown): Record<string, unknown> {
+  return input && typeof input === "object" && "data" in input
+    ? (input.data as Record<string, unknown>)
+    : {};
 }

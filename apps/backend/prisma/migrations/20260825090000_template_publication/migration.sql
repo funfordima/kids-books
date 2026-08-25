@@ -63,6 +63,9 @@ ALTER TABLE "template_publication_audits"
 CREATE INDEX "template_publication_audits_source_book_id_pipeline_version_idx"
   ON "template_publication_audits"("source_book_id", "pipeline_version");
 
+CREATE UNIQUE INDEX "template_publication_audits_source_book_id_pipeline_version_key"
+  ON "template_publication_audits"("source_book_id", "pipeline_version");
+
 CREATE INDEX "template_publication_audits_template_id_idx"
   ON "template_publication_audits"("template_id");
 

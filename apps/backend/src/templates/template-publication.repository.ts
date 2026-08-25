@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { PrismaService } from "../database/prisma.service";
+import { scanTemplateSimilarity } from "./template-similarity";
 import type {
   PublicTemplateSummary,
   SourceBookForPublication,
@@ -8,6 +9,10 @@ import type {
   TemplatePublicationDecision,
   TemplatePublicationRepository,
   TemplatePublicationResult
+} from "./templates.interfaces";
+import {
+  TEMPLATE_PUBLICATION_PIPELINE_VERSION,
+  TEMPLATE_SIMILARITY_THRESHOLD
 } from "./templates.interfaces";
 
 @Injectable()
@@ -69,40 +74,56 @@ export class PrismaTemplatePublicationRepository
   }
 
   public async listActivePublicCatalog(): Promise<readonly TemplateCatalogEntry[]> {
-    const templates = await this.client.template.findMany({
-      where: {
-        visibility: "PUBLIC",
-        publicationStatus: "ACCEPTED",
-        disabledAt: null
-      },
-      select: {
-        id: true,
-        uniquenessFingerprint: true,
-        semanticVersion: true,
-        semanticModel: true,
-        semanticAlgorithm: true,
-        semanticSignature: true
-      }
-    });
-
-    return templates.map((template) => ({
-      id: template.id,
-      uniquenessFingerprint: template.uniquenessFingerprint ?? "",
-      semanticVersion: template.semanticVersion ?? null,
-      semanticModel: template.semanticModel ?? null,
-      semanticAlgorithm: template.semanticAlgorithm ?? null,
-      semanticSignature: Array.isArray(template.semanticSignature)
-        ? template.semanticSignature.filter(
-            (value): value is number => typeof value === "number"
-          )
-        : null
-    }));
+    return listActivePublicCatalog(this.client);
   }
 
   public async acceptPublication(input: Parameters<
     TemplatePublicationRepository["acceptPublication"]
   >[0]): Promise<TemplatePublicationResult> {
     return this.client.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(
+        "SELECT pg_advisory_xact_lock(hashtext('template-publication-v1'))"
+      );
+
+      const existingAudit = await tx.templatePublicationAudit.findFirst({
+        where: {
+          sourceBookId: input.sourceBook.id,
+          pipelineVersion: TEMPLATE_PUBLICATION_PIPELINE_VERSION
+        },
+        orderBy: { createdAt: "asc" }
+      });
+      if (existingAudit) {
+        return {
+          sourceBookId: input.sourceBook.id,
+          templateId: existingAudit.templateId,
+          decision: auditDecision(existingAudit)
+        };
+      }
+
+      const catalog = await listActivePublicCatalog(tx);
+      const finalDecision = finalPublicationDecision({
+        fingerprint: input.fingerprint,
+        signature: input.signature,
+        catalog: catalog,
+        initialDecision: input.decision
+      });
+      if (finalDecision.outcome !== "ACCEPTED") {
+        const audit = await tx.templatePublicationAudit.create({
+          data: auditCreateInput({
+            sourceBookId: input.sourceBook.id,
+            templateId: null,
+            actor: input.actor,
+            decision: finalDecision
+          })
+        });
+
+        return {
+          sourceBookId: input.sourceBook.id,
+          templateId: null,
+          decision: auditDecision(audit)
+        };
+      }
+
       const template = await tx.template.create({
         data: {
           ownerUserId: input.sourceBook.userId,
@@ -136,7 +157,7 @@ export class PrismaTemplatePublicationRepository
             privacyPassed: true,
             moderationPassed: true
           },
-          publicationDecision: input.decision
+          publicationDecision: finalDecision
         }
       });
       await tx.templatePublicationAudit.create({
@@ -144,14 +165,14 @@ export class PrismaTemplatePublicationRepository
           sourceBookId: input.sourceBook.id,
           templateId: template.id,
           actor: input.actor,
-          decision: input.decision
+          decision: finalDecision
         })
       });
 
       return {
         sourceBookId: input.sourceBook.id,
         templateId: template.id,
-        decision: input.decision
+        decision: finalDecision
       };
     });
   }
@@ -218,6 +239,113 @@ export class PrismaTemplatePublicationRepository
   }
 }
 
+async function listActivePublicCatalog(
+  client: TemplatePublicationPrismaClient
+): Promise<readonly TemplateCatalogEntry[]> {
+  const templates = await client.template.findMany({
+    where: {
+      visibility: "PUBLIC",
+      publicationStatus: "ACCEPTED",
+      disabledAt: null
+    },
+    select: {
+      id: true,
+      uniquenessFingerprint: true,
+      semanticVersion: true,
+      semanticModel: true,
+      semanticAlgorithm: true,
+      semanticSignature: true
+    }
+  });
+
+  return templates.map((template) => ({
+    id: template.id,
+    uniquenessFingerprint: template.uniquenessFingerprint ?? "",
+    semanticVersion: template.semanticVersion ?? null,
+    semanticModel: template.semanticModel ?? null,
+    semanticAlgorithm: template.semanticAlgorithm ?? null,
+    semanticSignature: Array.isArray(template.semanticSignature)
+      ? template.semanticSignature.filter(
+          (value): value is number => typeof value === "number"
+        )
+      : null
+  }));
+}
+
+function finalPublicationDecision(input: {
+  readonly fingerprint: string;
+  readonly signature: Parameters<typeof scanTemplateSimilarity>[0]["candidate"];
+  readonly catalog: readonly TemplateCatalogEntry[];
+  readonly initialDecision: TemplatePublicationDecision;
+}): TemplatePublicationDecision {
+  const fingerprintCollision = input.catalog.some(
+    (entry) => entry.uniquenessFingerprint === input.fingerprint
+  );
+  const similarity = scanTemplateSimilarity({
+    candidate: input.signature,
+    catalog: input.catalog,
+    threshold: TEMPLATE_SIMILARITY_THRESHOLD
+  });
+
+  if (!similarity.catalogReady) {
+    return {
+      ...input.initialDecision,
+      outcome: "HELD_TECHNICAL",
+      reasonCode: similarity.invalidReason ?? "semantic_catalog_not_ready",
+      fingerprintCollision,
+      semanticCatalogReady: false,
+      semanticMaxScore: null,
+      matchedTemplateIds: []
+    };
+  }
+
+  if (fingerprintCollision && similarity.matchedTemplateIds.length > 0) {
+    return {
+      ...input.initialDecision,
+      outcome: "REJECTED_DUPLICATE",
+      reasonCode: "duplicate_fingerprint_and_semantic",
+      fingerprintCollision: true,
+      semanticCatalogReady: true,
+      semanticMaxScore: similarity.maxScore,
+      matchedTemplateIds: similarity.matchedTemplateIds
+    };
+  }
+
+  if (fingerprintCollision) {
+    return {
+      ...input.initialDecision,
+      outcome: "REJECTED_REVIEW_REQUIRED",
+      reasonCode: "fingerprint_collision_only",
+      fingerprintCollision: true,
+      semanticCatalogReady: true,
+      semanticMaxScore: similarity.maxScore,
+      matchedTemplateIds: similarity.matchedTemplateIds
+    };
+  }
+
+  if (similarity.matchedTemplateIds.length > 0) {
+    return {
+      ...input.initialDecision,
+      outcome: "REJECTED_REVIEW_REQUIRED",
+      reasonCode: "semantic_similarity_only",
+      fingerprintCollision: false,
+      semanticCatalogReady: true,
+      semanticMaxScore: similarity.maxScore,
+      matchedTemplateIds: similarity.matchedTemplateIds
+    };
+  }
+
+  return {
+    ...input.initialDecision,
+    outcome: "ACCEPTED",
+    reasonCode: "accepted_unique",
+    fingerprintCollision: false,
+    semanticCatalogReady: true,
+    semanticMaxScore: similarity.maxScore,
+    matchedTemplateIds: []
+  };
+}
+
 interface TemplatePublicationPrismaClient {
   readonly book: {
     findFirst(input: unknown): Promise<PrismaBookWithPages | null>;
@@ -232,6 +360,7 @@ interface TemplatePublicationPrismaClient {
     findFirst(input: unknown): Promise<PrismaAuditRecord | null>;
     create(input: unknown): Promise<PrismaAuditRecord>;
   };
+  $executeRawUnsafe(query: string): Promise<unknown>;
   $transaction<T>(
     input: (client: TemplatePublicationPrismaClient) => Promise<T>
   ): Promise<T>;

@@ -262,6 +262,7 @@ model TemplatePublicationAudit {
   retryOfAudit TemplatePublicationAudit?   @relation("TemplatePublicationRetry", fields: [retryOfAuditId], references: [id], onDelete: SetNull)
   retries      TemplatePublicationAudit[]  @relation("TemplatePublicationRetry")
 
+  @@unique([sourceBookId, pipelineVersion])
   @@index([sourceBookId, pipelineVersion])
   @@index([templateId])
   @@index([outcome, reasonCode])
