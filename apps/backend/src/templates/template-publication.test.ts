@@ -471,6 +471,27 @@ describe("PrismaTemplatePublicationRepository", () => {
       decision: { outcome: "ACCEPTED" }
     });
   });
+
+  it("marks moderation-unavailable audit records as not moderation-passed", async () => {
+    const capturedData: Record<string, unknown>[] = [];
+    const prisma = prismaStub({ capturedAuditData: capturedData });
+    const repository = new PrismaTemplatePublicationRepository(prisma);
+
+    await repository.recordDecision({
+      sourceBookId: "book-1",
+      templateId: null,
+      actor: { type: "system", id: null },
+      decision: {
+        ...acceptedDecision(),
+        outcome: "REJECTED_MODERATION",
+        reasonCode: "moderation_unavailable"
+      }
+    });
+
+    expect(capturedData).toContainEqual(
+      expect.objectContaining({ moderationPassed: false })
+    );
+  });
 });
 
 function serviceWith(
@@ -559,6 +580,7 @@ function prismaStub(options: {
   readonly existingAudit?: ReturnType<typeof acceptedDecision> & {
     readonly templateId: string | null;
   };
+  readonly capturedAuditData?: Record<string, unknown>[];
 } = {}) {
   const templateRecord = {
     id: "template-1",
@@ -611,10 +633,14 @@ function prismaStub(options: {
     templatePublicationAudit: {
       findFirst: vi.fn(() => Promise.resolve(options.existingAudit ?? null)),
       create: vi.fn((input: unknown) =>
-        Promise.resolve({
-          ...auditRecord,
-          ...recordData(input)
-        })
+        {
+          const data = recordData(input);
+          options.capturedAuditData?.push(data);
+          return Promise.resolve({
+            ...auditRecord,
+            ...data
+          });
+        }
       )
     },
     $executeRawUnsafe: vi.fn(() => Promise.resolve(1)),

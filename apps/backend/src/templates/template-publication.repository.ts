@@ -441,7 +441,10 @@ function auditCreateInput(input: TemplatePublicationAuditInput) {
     semanticVersion: input.decision.semanticVersion,
     moderationVersion: input.decision.moderationVersion,
     privacyPassed: input.decision.reasonCode !== "privacy_identifier_detected",
-    moderationPassed: input.decision.reasonCode !== "moderation_flagged",
+    moderationPassed: ![
+      "moderation_flagged",
+      "moderation_unavailable"
+    ].includes(input.decision.reasonCode),
     fingerprintCollision: input.decision.fingerprintCollision,
     semanticCatalogReady: input.decision.semanticCatalogReady,
     semanticMaxScore: input.decision.semanticMaxScore,
